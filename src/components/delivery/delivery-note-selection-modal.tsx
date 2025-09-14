@@ -116,7 +116,7 @@ export default function DeliveryNoteSelectionModal({
               송품장 출력
             </DialogTitle>
             <DialogDescription>
-              출력 가능한 완료된 접수가 없습니다.
+              오늘 출력 가능한 완료된 접수가 없습니다.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end pt-4">
@@ -135,10 +135,10 @@ export default function DeliveryNoteSelectionModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DocumentTextIcon className="w-5 h-5" />
-            송품장 출력 선택
+            당일 송품장 출력 선택
           </DialogTitle>
           <DialogDescription>
-            출력할 송품장 그룹을 선택해주세요. (공판장별-품목별 그룹화)
+            오늘 완료된 접수의 송품장 그룹을 선택해주세요. (공판장별-품목별 그룹화)
           </DialogDescription>
         </DialogHeader>
 

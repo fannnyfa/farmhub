@@ -1,10 +1,11 @@
 import { Collection } from '@/lib/database.types'
 
-// 완료된 항목만 추출하고 공판장별-품목별로 그룹화
+// 당일 완료된 항목만 추출하고 공판장별-품목별로 그룹화
 export const groupCompletedCollections = (collections: Collection[]) => {
-  // 1. 완료된 항목만 필터링
+  // 1. 당일 완료된 항목만 필터링
+  const today = new Date().toISOString().split('T')[0]
   const completedCollections = collections.filter(
-    (collection) => collection.status === 'completed'
+    (collection) => collection.status === 'completed' && collection.reception_date === today
   )
 
   if (completedCollections.length === 0) {

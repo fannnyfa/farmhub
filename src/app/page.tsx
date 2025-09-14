@@ -20,7 +20,7 @@ export default function Home() {
   const { collections, loading: collectionsLoading, getTodayStats, fetchCollections, updateCollection, deleteCollection, createCollection } = useCollections()
   const [showModal, setShowModal] = useState(false)
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null)
-  const [activeTab, setActiveTab] = useState("all")
+  const [activeTab, setActiveTab] = useState("today")
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
   const router = useRouter()
 
@@ -70,19 +70,19 @@ export default function Home() {
   // 통계 데이터
   const stats = getTodayStats()
 
-  // 탭별 필터링
+  // 탭별 필터링 (당일 기준)
   const getFilteredCollections = () => {
     const today = new Date().toISOString().split('T')[0]
+    const todayCollections = collections.filter(col => col.reception_date === today)
     
     switch (activeTab) {
-      case "today":
-        return collections.filter(col => col.reception_date === today)
       case "pending":
-        return collections.filter(col => col.status === 'pending')
+        return todayCollections.filter(col => col.status === 'pending')
       case "completed":
-        return collections.filter(col => col.status === 'completed')
+        return todayCollections.filter(col => col.status === 'completed')
+      case "today":
       default:
-        return collections
+        return todayCollections
     }
   }
 
@@ -179,18 +179,15 @@ export default function Home() {
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="all">
-                    전체 ({collections.length})
-                  </TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="today">
-                    오늘 ({stats.total})
+                    당일 전체 ({stats.total})
                   </TabsTrigger>
                   <TabsTrigger value="pending">
-                    대기중 ({collections.filter(c => c.status === 'pending').length})
+                    당일 대기중 ({stats.pending})
                   </TabsTrigger>
                   <TabsTrigger value="completed">
-                    완료 ({collections.filter(c => c.status === 'completed').length})
+                    당일 완료 ({stats.completed})
                   </TabsTrigger>
                 </TabsList>
 
