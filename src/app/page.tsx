@@ -13,7 +13,6 @@ import Loading from "@/components/ui/loading"
 import CollectionFormModalV2 from "@/components/collections/collection-form-modal-v2"
 import CollectionTableV2 from "@/components/collections/collection-table-v2"
 import { Collection } from "@/lib/database.types"
-import DeliveryNoteSelectionModal from "@/components/delivery/delivery-note-selection-modal"
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -21,7 +20,6 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false)
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null)
   const [activeTab, setActiveTab] = useState("today")
-  const [showDeliveryModal, setShowDeliveryModal] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -62,9 +60,10 @@ export default function Home() {
     // 상태는 useCollections 훅에서 자동 업데이트됨
   }
 
-  // 송품장 출력 모달 열기
+  // 송품장 출력 페이지로 이동
   const handleDeliveryNotes = () => {
-    setShowDeliveryModal(true)
+    // 새 탭에서 송품장 페이지 열기
+    window.open('/delivery-notes', '_blank')
   }
 
   // 통계 데이터
@@ -214,12 +213,6 @@ export default function Home() {
           onUpdateCollection={updateCollection}
         />
 
-        {/* 송품장 출력 선택 모달 */}
-        <DeliveryNoteSelectionModal
-          open={showDeliveryModal}
-          onClose={() => setShowDeliveryModal(false)}
-          collections={collections}
-        />
       </div>
     </MainLayout>
   )
