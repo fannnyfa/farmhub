@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate:types": "node scripts/generate-types.js",
+    "db:migrate": "echo 'supabase/run_migrations.sql을 Supabase SQL Editor에서 실행하세요'",
+    "db:status": "echo 'Supabase 대시보드에서 테이블 상태를 확인하세요'"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
