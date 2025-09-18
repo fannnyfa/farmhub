@@ -28,6 +28,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const supabase = createClient()
 
   useEffect(() => {
+    // Supabase 클라이언트가 없으면 로딩 완료 처리
+    if (!supabase) {
+      setLoading(false)
+      setError('Supabase 연결을 사용할 수 없습니다. 환경 설정을 확인해주세요.')
+      return
+    }
+    
     // 초기 사용자 상태 확인
     checkUser()
   }, [])
@@ -36,6 +43,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true)
       setError(null)
+      
+      // Supabase 클라이언트가 없으면 로컬 저장소만 확인
+      if (!supabase) {
+        const storedUser = localStorage.getItem('farmhub-user')
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser)
+            setUser(userData)
+          } catch (parseError) {
+            localStorage.removeItem('farmhub-user')
+            setUser(null)
+          }
+        }
+        setLoading(false)
+        return
+      }
       
       // 저장된 사용자 정보 확인
       const storedUser = localStorage.getItem('farmhub-user')
@@ -77,6 +100,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true)
       setError(null)
+
+      if (!supabase) {
+        setError('데이터베이스 연결을 사용할 수 없습니다.')
+        return { success: false }
+      }
 
       // 사용자 정보 조회
       const { data: userData, error: userError } = await supabase
@@ -126,6 +154,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true)
       setError(null)
+
+      if (!supabase) {
+        setError('데이터베이스 연결을 사용할 수 없습니다.')
+        return { success: false }
+      }
 
       // 중복 이메일 확인
       const { data: existingUser } = await supabase

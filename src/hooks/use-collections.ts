@@ -17,6 +17,11 @@ export function useCollections() {
 
   // 공판장 목록 불러오기
   const fetchMarkets = async () => {
+    if (!supabase) {
+      console.warn('Supabase 클라이언트를 사용할 수 없습니다.')
+      return
+    }
+    
     try {
       const { data, error: fetchError } = await supabase
         .from('markets')
@@ -38,6 +43,11 @@ export function useCollections() {
 
   // 지역별 공판장 불러오기
   const fetchMarketRegions = async () => {
+    if (!supabase) {
+      console.warn('Supabase 클라이언트를 사용할 수 없습니다.')
+      return
+    }
+    
     try {
       const { data, error: fetchError } = await supabase
         .from('market_regions')
@@ -58,7 +68,10 @@ export function useCollections() {
 
   // 접수 목록 불러오기
   const fetchCollections = async () => {
-    if (!user) return
+    if (!user || !supabase) {
+      if (!supabase) console.warn('Supabase 클라이언트를 사용할 수 없습니다.')
+      return
+    }
 
     try {
       setLoading(true)
@@ -89,6 +102,11 @@ export function useCollections() {
   const createCollection = async (collectionData: Omit<CollectionInsert, 'user_id'>) => {
     if (!user) {
       setError('사용자 정보가 없습니다.')
+      return { success: false }
+    }
+
+    if (!supabase) {
+      setError('데이터베이스 연결을 사용할 수 없습니다.')
       return { success: false }
     }
 
@@ -126,6 +144,11 @@ export function useCollections() {
 
   // 접수 수정
   const updateCollection = async (id: string, updates: Partial<CollectionInsert>) => {
+    if (!supabase) {
+      setError('데이터베이스 연결을 사용할 수 없습니다.')
+      return { success: false }
+    }
+    
     try {
       setLoading(true)
       setError(null)
@@ -161,6 +184,11 @@ export function useCollections() {
 
   // 접수 삭제
   const deleteCollection = async (id: string) => {
+    if (!supabase) {
+      setError('데이터베이스 연결을 사용할 수 없습니다.')
+      return { success: false }
+    }
+    
     try {
       setLoading(true)
       setError(null)

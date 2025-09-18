@@ -66,6 +66,11 @@ export default function CollectionFormModalV2({
   // 지역별 공판장 데이터 불러오기
   useEffect(() => {
     const fetchMarketRegions = async () => {
+      if (!supabase) {
+        console.warn('Supabase 클라이언트를 사용할 수 없습니다.')
+        return
+      }
+      
       try {
         const { data, error } = await supabase
           .from('market_regions')
