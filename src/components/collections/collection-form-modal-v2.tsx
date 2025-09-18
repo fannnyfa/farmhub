@@ -11,19 +11,24 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { CollectionInsert, ProductType, BoxWeight, MarketRegion } from "@/lib/database.types"
+import { Collection, CollectionInsert, ProductType, MarketRegion } from "@/lib/database.types"
 import { createClient } from "@/lib/supabase"
 import { toast } from "sonner"
 import Loading from "@/components/ui/loading"
+
+interface ApiResponse {
+  success: boolean
+  data?: Collection
+  error?: string
+}
 
 interface CollectionFormModalProps {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
   editData?: CollectionInsert & { id?: string }
-  onCreateCollection: (data: Omit<CollectionInsert, 'user_id'>) => Promise<{ success: boolean; data?: any }>
-  onUpdateCollection: (id: string, data: Partial<CollectionInsert>) => Promise<{ success: boolean; data?: any }>
+  onCreateCollection: (data: Omit<CollectionInsert, 'user_id'>) => Promise<ApiResponse>
+  onUpdateCollection: (id: string, data: Partial<CollectionInsert>) => Promise<ApiResponse>
 }
 
 // 품종 옵션 정의
@@ -145,7 +150,7 @@ export default function CollectionFormModalV2({
     }
   }, [open])
 
-  const handleInputChange = (field: keyof CollectionInsert, value: any) => {
+  const handleInputChange = (field: keyof CollectionInsert, value: string | number | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -243,7 +248,7 @@ export default function CollectionFormModalV2({
                 <Input
                   id="reception_date"
                   type="date"
-                  value={formData.reception_date}
+                  value={formData.reception_date || ''}
                   onChange={(e) => handleInputChange("reception_date", e.target.value)}
                   disabled={loading}
                 />
@@ -409,7 +414,7 @@ export default function CollectionFormModalV2({
                     <SelectValue placeholder="지역 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {uniqueRegions.map((region) => (
+                    {uniqueRegions.filter(region => region !== null).map((region) => (
                       <SelectItem key={region} value={region}>
                         {region}
                       </SelectItem>

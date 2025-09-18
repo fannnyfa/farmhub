@@ -81,8 +81,8 @@ const calculateShippingFees = (collections: Collection[]): {
     if (groupedData[groupKey].collections.length === 1) {
       calculations.push({
         productType,
-        variety: productType === '깻잎' ? collection.product_variety : undefined,
-        weight: productType !== '깻잎' ? collection.box_weight : undefined,
+        variety: productType === '깻잎' ? collection.product_variety || undefined : undefined,
+        weight: productType !== '깻잎' ? collection.box_weight || undefined : undefined,
         quantity: 0, // 나중에 업데이트
         unitRate,
         totalAmount: 0, // 나중에 업데이트
@@ -580,7 +580,7 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
     const pdfBytes = await pdfDoc.save()
     
     // 다운로드
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -1086,7 +1086,7 @@ export const previewSelectedDeliveryNotesPDF = async (selectedGroups: DeliveryNo
       const pdfBytes = await generateDeliveryNotePDFBlob(group)
       
       // PDF Blob 생성
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       
       // 새 탭에서 PDF 미리보기 열기

@@ -88,7 +88,7 @@ export default function Home() {
   const filteredCollections = getFilteredCollections()
 
   return (
-    <MainLayout user={user}>
+    <MainLayout user={user ? { name: user.name, email: user.email, role: user.role || 'user' } : null}>
       <div className="space-y-6">
         {/* 페이지 헤더 */}
         <div className="flex justify-between items-center">
@@ -208,7 +208,7 @@ export default function Home() {
           open={showModal}
           onClose={handleCloseModal}
           onSuccess={handleModalSuccess}
-          editData={editingCollection}
+          editData={editingCollection || undefined}
           onCreateCollection={createCollection}
           onUpdateCollection={updateCollection}
         />

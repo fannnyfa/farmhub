@@ -79,8 +79,8 @@ const calculateShippingFees = (collections: Collection[]): {
     if (groupedData[groupKey].collections.length === 1) {
       calculations.push({
         productType,
-        variety: productType === '깻잎' ? collection.product_variety : undefined,
-        weight: productType !== '깻잎' ? collection.box_weight : undefined,
+        variety: productType === '깻잎' ? collection.product_variety || undefined : undefined,
+        weight: productType !== '깻잎' ? collection.box_weight || undefined : undefined,
         quantity: 0, // 나중에 업데이트
         unitRate,
         totalAmount: 0, // 나중에 업데이트

@@ -23,7 +23,6 @@ import {
   TrashIcon,
   CheckCircleIcon,
   ClockIcon,
-  DocumentTextIcon,
 } from "@heroicons/react/24/outline"
 import { Collection, CollectionInsert } from "@/lib/database.types"
 import { toast } from "sonner"
@@ -118,7 +117,7 @@ export default function CollectionTableV2({ collections, onEdit, onUpdate, onDel
       <div className="text-center py-12">
         <p className="text-gray-500">접수된 내역이 없습니다.</p>
         <p className="text-sm text-gray-400 mt-2">
-          우측 상단의 '접수 등록' 버튼을 눌러 새로운 접수를 등록해보세요.
+          우측 상단의 &apos;접수 등록&apos; 버튼을 눌러 새로운 접수를 등록해보세요.
         </p>
       </div>
     )

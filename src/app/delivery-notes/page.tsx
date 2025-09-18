@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Collection } from "@/lib/database.types"
 import {
   DocumentTextIcon,
   CheckIcon,
@@ -109,7 +110,7 @@ export default function DeliveryNotesPage() {
   }
 
   // 품목 표시용 헬퍼 함수
-  const getProductDisplayName = (productType: string, collections: any[]) => {
+  const getProductDisplayName = (productType: string, collections: Collection[]) => {
     const varieties = collections
       .filter(c => c.product_variety)
       .map(c => c.product_variety)
@@ -135,7 +136,7 @@ export default function DeliveryNotesPage() {
 
   if (collectionsLoading) {
     return (
-      <MainLayout user={user}>
+      <MainLayout user={user ? { name: user.name, email: user.email, role: user.role || 'user' } : null}>
         <div className="min-h-screen flex items-center justify-center">
           <Loading size="lg" />
         </div>
@@ -145,7 +146,7 @@ export default function DeliveryNotesPage() {
 
   if (groups.length === 0) {
     return (
-      <MainLayout user={user}>
+      <MainLayout user={user ? { name: user.name, email: user.email, role: user.role || 'user' } : null}>
         <div className="space-y-6">
           {/* 페이지 헤더 */}
           <div className="flex items-center gap-4">
@@ -180,7 +181,7 @@ export default function DeliveryNotesPage() {
   }
 
   return (
-    <MainLayout user={user}>
+    <MainLayout user={user ? { name: user.name, email: user.email, role: user.role || 'user' } : null}>
       <div className="space-y-6">
         {/* 페이지 헤더 */}
         <div className="flex items-center gap-4">
