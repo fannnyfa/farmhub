@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: '/Users/MSSon/apple_log2/farmhub-apple-logistics'
+  // Vercel 배포 호환성을 위해 turbopack root 설정 제거
+  experimental: {
+    turbo: {
+      rules: {}
+    }
   }
 };
 

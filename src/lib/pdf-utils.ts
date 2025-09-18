@@ -2,6 +2,121 @@ import jsPDF from 'jspdf'
 import { Collection } from '@/lib/database.types'
 import { DeliveryNoteGroup } from './delivery-note-utils'
 
+// 운임료 체계 정의 (pdf-lib-utils.ts와 동일)
+const shippingRates = {
+  사과: { 
+    '10kg': 1000, 
+    '5kg': 600 
+  },
+  감: { 
+    '10kg': 1100,   // 단감, 대봉, 약시 모두 동일
+    '5kg': 700 
+  },
+  깻잎: { 
+    정품: 600,      // 무게 상관없이
+    바라: 1000      // 무게 상관없이
+  }
+} as const
+
+// 운임료 계산 결과 타입
+interface ShippingCalculation {
+  productType: string
+  variety?: string
+  weight?: string
+  quantity: number
+  unitRate: number
+  totalAmount: number
+  displayText: string
+}
+
+// 운임료 계산 함수 (pdf-lib-utils.ts와 동일)
+const calculateShippingFees = (collections: Collection[]): { 
+  calculations: ShippingCalculation[], 
+  totalAmount: number 
+} => {
+  console.log('🚛 [jsPDF] 운임료 계산 시작 - 컬렉션 개수:', collections.length)
+  const calculations: ShippingCalculation[] = []
+  
+  // 컬렉션을 품목별/규격별로 그룹화
+  const groupedData: { [key: string]: { quantity: number, collections: Collection[] } } = {}
+  
+  collections.forEach(collection => {
+    const productType = collection.product_type
+    if (!productType) return
+    
+    let groupKey = ''
+    let unitRate = 0
+    let displayText = ''
+    
+    if (productType === '깻잎') {
+      // 깻잎은 품종별로 계산 (무게 상관없이)
+      const variety = collection.product_variety || '정품'
+      groupKey = `${productType}-${variety}`
+      unitRate = shippingRates.깻잎[variety as '정품' | '바라'] || 0
+      displayText = `${productType} ${variety}`
+    } else {
+      // 사과, 감은 무게별로 계산
+      const weight = collection.box_weight || '10kg'
+      groupKey = `${productType}-${weight}`
+      
+      if (productType === '사과') {
+        unitRate = shippingRates.사과[weight as '10kg' | '5kg'] || 0
+      } else if (productType === '감') {
+        unitRate = shippingRates.감[weight as '10kg' | '5kg'] || 0
+      }
+      
+      displayText = `${productType} ${weight}`
+    }
+    
+    if (!groupedData[groupKey]) {
+      groupedData[groupKey] = { quantity: 0, collections: [] }
+    }
+    
+    groupedData[groupKey].quantity += collection.quantity || 0
+    groupedData[groupKey].collections.push(collection)
+    
+    // 첫 번째 컬렉션의 정보를 사용하여 계산 정보 저장
+    if (groupedData[groupKey].collections.length === 1) {
+      calculations.push({
+        productType,
+        variety: productType === '깻잎' ? collection.product_variety : undefined,
+        weight: productType !== '깻잎' ? collection.box_weight : undefined,
+        quantity: 0, // 나중에 업데이트
+        unitRate,
+        totalAmount: 0, // 나중에 업데이트
+        displayText
+      })
+    }
+  })
+  
+  // 계산 결과 업데이트
+  Object.entries(groupedData).forEach(([groupKey, data]) => {
+    const calculation = calculations.find(calc => {
+      if (calc.productType === '깻잎') {
+        return `${calc.productType}-${calc.variety}` === groupKey
+      } else {
+        return `${calc.productType}-${calc.weight}` === groupKey
+      }
+    })
+    
+    if (calculation) {
+      calculation.quantity = data.quantity
+      calculation.totalAmount = data.quantity * calculation.unitRate
+    }
+  })
+  
+  // 총 운임료 계산
+  const totalAmount = calculations.reduce((sum, calc) => sum + calc.totalAmount, 0)
+  
+  console.log('🚛 [jsPDF] 운임료 계산 완료:', {
+    calculationsCount: calculations.length,
+    calculations: calculations,
+    totalAmount: totalAmount
+  })
+  
+  return { calculations, totalAmount }
+}
+
 // 한글 텍스트를 그대로 유지 (PDF 생성 시 문제가 있을 수 있지만 시도)
 const getDisplayText = (text: string) => {
   // 원본 텍스트 그대로 반환 (한글 유지)
@@ -16,6 +131,8 @@ const formatDate = (dateString: string) => {
 
 // jsPDF를 사용한 송품장 생성
 export const generateDeliveryNotePDF = async (group: DeliveryNoteGroup): Promise<void> => {
+  console.log('🏷️ [jsPDF 함수 호출됨] generateDeliveryNotePDF 시작 - 그룹:', group.market, group.productType)
+  
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -74,7 +191,7 @@ export const generateDeliveryNotePDF = async (group: DeliveryNoteGroup): Promise
   
   // 테이블 선 그리기 함수 - 정확한 좌표 계산
   const drawTableLines = (startY: number, rows: number) => {
-    const rowHeight = 8 // 각 행 높이 8mm
+    const rowHeight = 10 // 각 행 높이 8mm → 10mm로 증가 (여백 개선)
     const tableHeight = rows * rowHeight
     const tableEndX = margin + totalTableWidth
     
@@ -104,16 +221,16 @@ export const generateDeliveryNotePDF = async (group: DeliveryNoteGroup): Promise
     const cellCenter = xPos + (cellWidth / 2)
     const textWidth = pdf.getTextWidth(headers[i])
     const textX = cellCenter - (textWidth / 2)
-    const textY = yPos + 5.5 // 수직 중앙 (행 높이 8mm의 중간)
+    const textY = yPos + 7.5 // 수직 중앙 정렬 (행 높이 10mm에서 아래로 조정)
     
     pdf.text(headers[i], textX, textY)
     xPos += cellWidth
   }
   
-  yPos += 8
+  yPos += 10  // 8 → 10으로 변경 (행 높이와 일치)
   
   // 데이터 행들
-  pdf.setFontSize(10)
+  pdf.setFontSize(11)  // 헤더와 동일한 크기 (11)
   
   const maxRows = 10
   const leftData = group.collections.slice(0, maxRows)
@@ -164,30 +281,76 @@ export const generateDeliveryNotePDF = async (group: DeliveryNoteGroup): Promise
         const cellCenter = xPos + (cellWidth / 2)
         const textWidth = pdf.getTextWidth(cellText)
         const textX = cellCenter - (textWidth / 2)
-        const textY = yPos + 5.5 // 수직 중앙 정렬
+        const textY = yPos + 7.5 // 수직 중앙 정렬 (행 높이 10mm에서 아래로 조정)
         
         pdf.text(cellText, textX, textY)
       }
       xPos += colWidths[j]
     }
     
-    yPos += 8
+    yPos += 10  // 8 → 10으로 변경 (행 높이와 일치)
   }
   
   // 테이블 선 그리기 - 헤더 포함
-  const tableStartY = yPos - (maxRows + 1) * 8 // 헤더 + 데이터 행들
+  const tableStartY = yPos - (maxRows + 1) * 10 // 헤더 + 데이터 행들 (행 높이 변경에 따라 8 → 10)
   drawTableLines(tableStartY, maxRows + 1)
   
   yPos += 15
   
-  // 계좌번호 및 기사 정보 - 항상 영어로 표시
+  // 운임료 계산 섹션 추가
+  const shippingInfo = calculateShippingFees(group.collections)
+  
+  console.log('📋 [jsPDF] PDF 운임료 섹션 진입:', {
+    yPos: yPos,
+    calculationsLength: shippingInfo.calculations.length,
+    totalAmount: shippingInfo.totalAmount
+  })
+  
+  if (shippingInfo.calculations.length > 0) {
+    console.log('📋 [jsPDF] 운임료 계산 내역 렌더링 시작')
+    
+    // 운임료 계산 제목
+    pdf.setFontSize(12)
+    pdf.text(getDisplayText('운임료 계산:'), margin, yPos)
+    yPos += 10
+    
+    // 각 운임료 항목 표시
+    pdf.setFontSize(11)  // 헤더와 동일한 크기 (11)
+    shippingInfo.calculations.forEach((calc) => {
+      if (calc.quantity > 0) {
+        const unitText = calc.productType === '깻잎' && calc.variety === '정품' ? getDisplayText('장') : getDisplayText('박스')
+        const calcText = `${getDisplayText(calc.displayText)}: ${calc.quantity}${unitText} × ${calc.unitRate.toLocaleString()}${getDisplayText('원')} = ${calc.totalAmount.toLocaleString()}${getDisplayText('원')}`
+        
+        console.log('📋 [jsPDF] 운임료 항목 렌더링:', calcText, 'at Y:', yPos)
+        
+        pdf.text(calcText, margin + 10, yPos)
+        yPos += 10  // 8 → 10으로 변경 (행 높이와 일치)
+      }
+    })
+    
+    // 구분선
+    pdf.line(margin, yPos + 2, margin + 200, yPos + 2)
+    yPos += 10
+    
+    // 총 운임료
+    pdf.setFontSize(12)
+    const totalText = `${getDisplayText('총 운임료')}: ${shippingInfo.totalAmount.toLocaleString()}${getDisplayText('원')}`
+    
+    console.log('📋 [jsPDF] 총 운임료 렌더링:', totalText, 'at Y:', yPos)
+    
+    pdf.text(totalText, margin, yPos)
+    yPos += 20
+  }
+  
+  // 계좌번호 및 기사 정보 - 헤더와 동일한 크기로 설정
+  pdf.setFontSize(11)  // 헤더와 동일한 크기 (11)
   const accountText = `${getDisplayText('계좌번호')}: ${getDisplayText('농협')} 356-0724-8964-13 (Min Jun Kang)`
   const driverText = getDisplayText('강민준 기사')
   const phoneText = `${getDisplayText('H.P')}: 010-3444-8853`
   
   pdf.text(accountText, margin, yPos)
   pdf.text(driverText, pageWidth - margin - pdf.getTextWidth(driverText), yPos)
-  yPos += 8
+  yPos += 10  // 8 → 10으로 변경 (행 높이와 일치)
   pdf.text(phoneText, pageWidth - margin - pdf.getTextWidth(phoneText), yPos)
   
   // PDF 저장
@@ -196,6 +359,8 @@ export const generateDeliveryNotePDF = async (group: DeliveryNoteGroup): Promise
 
 // 선택된 그룹들을 jsPDF로 출력
 export const downloadSelectedDeliveryNotes = async (selectedGroups: DeliveryNoteGroup[]) => {
+  console.log('🏷️ [jsPDF 다운로드 함수 호출됨] downloadSelectedDeliveryNotes 시작 - 그룹 수:', selectedGroups.length)
+  
   try {
     if (selectedGroups.length === 0) {
       return { success: false, message: '선택된 그룹이 없습니다.' }
