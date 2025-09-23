@@ -59,13 +59,13 @@ export default function CollectionFormModalV2({
 
   const [loading, setLoading] = useState(false)
 
-  // 공판장 목록 (하드코딩) - 왼쪽 세로, 오른쪽 세로 순서
+  // 공판장 목록 (하드코딩) - 사용자 요청 순서
   const markets = [
     "부산청과",
-    "항도청과", 
-    "엄궁농협공판장",
     "반여농협공판장",
-    "중앙청과",
+    "항도청과",
+    "중앙청과", 
+    "엄궁농협공판장",
     "동부청과"
   ]
 
@@ -443,10 +443,10 @@ export default function CollectionFormModalV2({
                       // 공판장에 따른 지역 설정
                       const regionMap: Record<string, string> = {
                         "부산청과": "남구",
-                        "항도청과": "서구",
-                        "엄궁농협공판장": "엄궁동",
                         "반여농협공판장": "해운대구",
+                        "항도청과": "서구",
                         "중앙청과": "동구",
+                        "엄궁농협공판장": "엄궁동",
                         "동부청과": "동래구"
                       }
                       handleInputChange("region", regionMap[market] || "")
