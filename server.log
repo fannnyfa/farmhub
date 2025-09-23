@@ -1,0 +1,44 @@
+
+> farmhub-apple-logistics@0.1.0 dev
+> next dev --turbopack
+
+ ⚠ The config property `experimental.turbo` is deprecated. Move this setting to `config.turbopack` or run `npx @next/codemod@latest next-experimental-turbo-to-turbopack .`
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/MSSon/bun.lock as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/MSSon/apple_log2/farmhub-apple-logistics/package-lock.json
+
+   ▲ Next.js 15.5.3 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.123.146:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · turbo
+
+ ✓ Starting...
+ ✓ Compiled middleware in 315ms
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 6.9s
+ GET / 200 in 7920ms
+ ✓ Compiled in 213ms
+ GET / 200 in 1022ms
+ GET / 200 in 302ms
+ ✓ Compiled /favicon.ico in 437ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 800ms
+ ✓ Compiled in 180ms
+ ✓ Compiled in 134ms
+ GET / 200 in 868ms
+ GET / 200 in 502ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 350ms
+ ✓ Compiled in 153ms
+ GET / 200 in 730ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 411ms
+ GET / 200 in 344ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 289ms
+ ○ Compiling /delivery-notes ...
+ ✓ Compiled /delivery-notes in 2.7s
+ GET /delivery-notes 200 in 3381ms
+[?25h

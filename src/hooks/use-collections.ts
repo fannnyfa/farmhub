@@ -114,6 +114,12 @@ export function useCollections() {
       setLoading(true)
       setError(null)
 
+      console.log('접수 생성 시작:')
+      console.log('- Supabase 클라이언트:', !!supabase)
+      console.log('- 사용자 정보:', user)
+      console.log('- 전송할 데이터:', collectionData)
+      console.log('- box_weight 값:', collectionData.box_weight)
+
       const { data, error: createError } = await supabase
         .from('collections')
         .insert({
@@ -125,8 +131,15 @@ export function useCollections() {
 
       if (createError) {
         setError('접수 등록 중 오류가 발생했습니다.')
-        console.error('접수 생성 오류:', createError)
-        return { success: false }
+        console.error('접수 생성 오류 상세:')
+        console.error('- 에러 객체:', createError)
+        console.error('- 메시지:', createError?.message)
+        console.error('- 상세:', createError?.details)
+        console.error('- 힌트:', createError?.hint)
+        console.error('- 코드:', createError?.code)
+        console.error('- 전송 데이터:', collectionData)
+        console.error('- 전체 에러:', JSON.stringify(createError, null, 2))
+        return { success: false, error: createError?.message || '알 수 없는 오류' }
       }
 
       // 즉시 상태 업데이트 (새 데이터를 맨 앞에 추가)
@@ -135,8 +148,13 @@ export function useCollections() {
 
     } catch (err) {
       setError('접수 등록 중 오류가 발생했습니다.')
-      console.error('접수 생성 중 오류:', err)
-      return { success: false }
+      console.error('접수 생성 중 오류 상세:')
+      console.error('- 에러 객체:', err)
+      console.error('- 메시지:', err instanceof Error ? err.message : String(err))
+      console.error('- 스택:', err instanceof Error ? err.stack : undefined)
+      console.error('- 전송 데이터:', collectionData)
+      console.error('- 전체 에러:', JSON.stringify(err, Object.getOwnPropertyNames(err)))
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
     } finally {
       setLoading(false)
     }
@@ -220,7 +238,10 @@ export function useCollections() {
 
   // 오늘 통계 계산
   const getTodayStats = () => {
-    const today = new Date().toISOString().split('T')[0]
+    // 한국 시간대(KST) 기준으로 오늘 날짜 계산
+    const now = new Date()
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)) // UTC+9
+    const today = koreaTime.toISOString().split('T')[0]
     const todayCollections = collections.filter(
       col => col.reception_date === today
     )

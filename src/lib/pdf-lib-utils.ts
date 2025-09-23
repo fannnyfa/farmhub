@@ -226,10 +226,13 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       }
     }
     
-    // 수학적 중앙 정렬을 위한 헬퍼 함수
+    // 수학적 중앙 정렬을 위한 헬퍼 함수 (개선된 정확도)
     const getCenterX = (text: string, fontSize: number, startX: number, width: number): number => {
-      const textWidth = font.widthOfTextAtSize(text, fontSize)
-      return startX + (width - textWidth) / 2
+      if (!text || !font) return startX
+      const textWidth = font.widthOfTextAtSize(String(text), fontSize)
+      const centeredX = startX + (width - textWidth) / 2
+      // 최소 여백 보장 (5포인트)
+      return Math.max(startX + 5, centeredX)
     }
     
     // 레이아웃 상수
@@ -293,10 +296,10 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       headerText: rgb(0, 0, 0)            // 검은 헤더 텍스트
     }
     
-    // 통합 테이블 설정 - 데이터, 운임료, 계좌정보를 하나의 테이블로 통합
+    // 통합 테이블 설정 - 데이터, 운임료, 계좌정보를 하나의 테이블로 통합 (정렬 개선)
     const tableStartY = yPos
-    const rowHeight = 20  // 15 → 18 → 20으로 증가 (글자 크기에 맞춰 조정)
-    const headerHeight = 24  // 20 → 22 → 24로 증가 (글자 크기에 맞춰 조정)
+    const rowHeight = 22  // 20 → 22로 증가 (텍스트 중앙정렬 개선)
+    const headerHeight = 26  // 24 → 26으로 증가 (헤더 여백 개선)
     
     // 컬럼 너비 계산 (8개 컬럼 - 2x4 구조)
     const colWidths = [
@@ -311,7 +314,7 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
     ]
     
     const tableWidth = contentWidth
-    const maxDataRows = 20  // 운임료와 계좌정보를 위한 공간 확보
+    const maxDataRows = 24  // A4 페이지를 가득 채우기 위해 행 수 증가 (20 → 24)
     
     // 운임료 계산
     const shippingInfo = calculateShippingFees(group.collections)
@@ -350,38 +353,38 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       borderWidth: 0.5
     })
     
-    // 헤더 텍스트 및 세로선
+    // 헤더 텍스트 및 세로선 (정렬 개선)
     const headers = ['생산자', '품명', '규격', '계', '생산자', '품명', '규격', '계'].map(h => getSafeText(h))
     let xPos = margin
-    const headerTextSize = 13
+    const headerTextSize = 12  // 13 → 12로 조정 (균형 개선)
     
     for (let i = 0; i < headers.length; i++) {
       const headerX = getCenterX(headers[i], headerTextSize, xPos, colWidths[i])
       page.drawText(headers[i], {
         x: headerX,
-        y: headerY - headerHeight/2 - 2,  // 텍스트를 아래로 이동하여 중앙 정렬
+        y: headerY - headerHeight/2 - 4,  // 텍스트를 아래로 이동 (1 → 4)
         size: headerTextSize,
         font,
         color: designColors.headerText
       })
       
-      // 세로선 그리기 (전체 테이블 높이에 걸쳐)
+      // 세로선 그리기 (전체 테이블 높이에 걸쳐) - 정확한 누적 계산
       if (i < headers.length - 1) {
         xPos += colWidths[i]
         page.drawLine({
           start: { x: xPos, y: headerY },
           end: { x: xPos, y: headerY - totalTableHeight },
           color: designColors.border,
-          thickness: 0.5
+          thickness: 0.7  // 0.5 → 0.7로 선 두께 개선
         })
       } else {
         xPos += colWidths[i]
       }
     }
     
-    // 데이터 행들
+    // 데이터 행들 (중앙정렬 개선)
     let currentY = headerY - headerHeight
-    const dataTextSize = 13  // 헤더와 동일한 크기 (13)
+    const dataTextSize = 11  // 헤더보다 작게 조정 (13 → 11)
     
     const leftData = group.collections.slice(0, maxDataRows)
     const rightData = group.collections.slice(maxDataRows, maxDataRows * 2)
@@ -430,14 +433,14 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       
       const allCells = [...leftCells, ...rightCells]
       
-      // 데이터 출력
+      // 데이터 출력 (정확한 중앙정렬)
       xPos = margin
       for (let j = 0; j < allCells.length; j++) {
         if (allCells[j]) {
           const cellX = getCenterX(allCells[j], dataTextSize, xPos, colWidths[j])
           page.drawText(allCells[j], {
             x: cellX,
-            y: currentY + rowHeight/2 - 2,  // 텍스트를 아래로 이동하여 중앙 정렬
+            y: currentY + rowHeight/2 - 3,  // 텍스트를 아래로 이동 (0 → -3)
             size: dataTextSize,
             font,
             color: designColors.text
@@ -463,9 +466,9 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       
       currentY -= rowHeight
       
-      const shippingItemSize = 13  // 헤더와 동일한 크기 (13)
-      const lineHeight = 15  // 줄 간격
-      let textY = currentY + rowHeight - 8  // 시작 Y 위치
+      const shippingItemSize = 11  // 데이터와 동일한 크기 (13 → 11)
+      const lineHeight = 16  // 줄 간격 개선 (15 → 16)
+      let textY = currentY + rowHeight - 16  // 운임료 텍스트 시작 위치를 아래로 조정 (12 → 16)
       
       // 운임료 행 배경 (높이를 항목 수에 따라 동적 계산)
       const validCalcs = shippingInfo.calculations.filter(c => c.quantity > 0)
@@ -536,14 +539,14 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       thickness: 1
     })
     
-    currentY -= rowHeight
+    currentY -= rowHeight * 1.5  // 계좌정보 행을 1.5배 높이로 확장
     
-    // 계좌정보 행 배경
+    // 계좌정보 행 배경 (높이 확장)
     page.drawRectangle({
       x: margin,
       y: currentY,
       width: tableWidth,
-      height: rowHeight,
+      height: rowHeight * 1.5,  // 높이를 1.5배로 확장
       color: rgb(0.98, 0.98, 0.98),  // 연한 회색 배경
       borderColor: designColors.border,
       borderWidth: 0.5
@@ -555,23 +558,34 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
     const accountColWidth3 = tableWidth * 0.3   // 전화번호 (30%)
     
     
-    // 계좌번호 (첫 번째 셀)
+    // 계좌번호 (첫 번째 셀) - 수직 중앙정렬 개선
     page.drawText(`${getSafeText('농협')} 356-0724-8964-13 (${getSafeText('강민준')})`, {
       x: margin + 8,
-      y: currentY + rowHeight/2 - 2,  // 텍스트를 아래로 이동하여 중앙 정렬
-      size: 13,  // 헤더와 동일한 크기 (13)
+      y: currentY + (rowHeight * 1.5)/2 - 3,  // 확장된 높이에 맞춰 중앙 정렬
+      size: 11,  // 데이터와 동일한 크기 (13 → 11)
       font,
       color: designColors.text
     })
     
     
-    // 전화번호 (세 번째 셀)
+    // 강민준 기사 (세 번째 셀 중앙 상단) - 위치 조정
+    const driverText = `${getSafeText('강민준 기사')}`
+    const driverX = getCenterX(driverText, 11, margin + accountColWidth1 + accountColWidth2, accountColWidth3)
+    page.drawText(driverText, {
+      x: driverX,
+      y: currentY + (rowHeight * 1.5) * 0.75 - 3,  // 셀의 상단 3/4 지점으로 이동 (더 아래로)
+      size: 11,
+      font,
+      color: designColors.text
+    })
+    
+    // 전화번호 (세 번째 셀 하단) - 위치 조정
     const phoneText = `${getSafeText('H.P')}: 010-3444-8853`
-    const phoneX = getCenterX(phoneText, 13, margin + accountColWidth1 + accountColWidth2, accountColWidth3)  // 헤더와 동일한 크기 (13)
+    const phoneX = getCenterX(phoneText, 11, margin + accountColWidth1 + accountColWidth2, accountColWidth3)
     page.drawText(phoneText, {
       x: phoneX,
-      y: currentY + rowHeight/2 - 2,  // 텍스트를 아래로 이동하여 중앙 정렬
-      size: 13,  // 헤더와 동일한 크기 (13)
+      y: currentY + 8,  // 셀 하단에 배치
+      size: 11,
       font,
       color: designColors.text
     })

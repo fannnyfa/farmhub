@@ -38,20 +38,6 @@
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #1f1f1f;
-    --card-foreground: #ededed;
-    --popover: #1f1f1f;
-    --popover-foreground: #ededed;
-    --muted: #374151;
-    --muted-foreground: #9ca3af;
-    --border: #374151;
-    --input: #374151;
-  }
-}
 
 body {
   background: var(--background);

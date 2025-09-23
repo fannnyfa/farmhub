@@ -51,7 +51,7 @@ export default function CollectionFormModalV2({
     reception_date: new Date().toISOString().split('T')[0],
     product_type: "사과",
     product_variety: null,
-    quantity: 1,
+    quantity: 0,
     box_weight: "10",
     region: "",
     market: "",
@@ -118,10 +118,31 @@ export default function CollectionFormModalV2({
   useEffect(() => {
     if (formData.product_type === '사과') {
       setFormData(prev => ({ ...prev, product_variety: null }))
+    } else if (formData.product_type === '깻잎') {
+      setFormData(prev => ({ 
+        ...prev, 
+        product_variety: "정품",
+        region: "엄궁동",
+        market: "엄궁놈협공판장"
+      }))
     } else {
       setFormData(prev => ({ ...prev, product_variety: "" }))
     }
   }, [formData.product_type])
+
+  // 감 품종별 박스무게 자동 설정
+  useEffect(() => {
+    if (formData.product_type === '감' && formData.product_variety === '약시') {
+      setFormData(prev => ({ ...prev, box_weight: "5kg" }))
+    }
+  }, [formData.product_type, formData.product_variety])
+
+  // 깻잎 품종별 박스무게 초기화 (최초 선택 시에만)
+  useEffect(() => {
+    if (formData.product_type === '깻잎' && formData.product_variety === '바라' && !formData.box_weight) {
+      setFormData(prev => ({ ...prev, box_weight: "5kg" }))
+    }
+  }, [formData.product_type, formData.product_variety])
 
   // 편집 모드일 때 기존 데이터로 폼 초기화
   useEffect(() => {
@@ -131,7 +152,7 @@ export default function CollectionFormModalV2({
         reception_date: editData.reception_date || new Date().toISOString().split('T')[0],
         product_type: editData.product_type as ProductType || "사과",
         product_variety: editData.product_variety || null,
-        quantity: editData.quantity || 1,
+        quantity: editData.quantity || 0,
         box_weight: editData.box_weight || "10kg",
         region: editData.region || "",
         market: editData.market || "",
@@ -147,7 +168,7 @@ export default function CollectionFormModalV2({
         reception_date: new Date().toISOString().split('T')[0],
         product_type: "사과",
         product_variety: null,
-        quantity: 1,
+        quantity: 0,
         box_weight: "10kg",
         region: "",
         market: "",
@@ -192,6 +213,16 @@ export default function CollectionFormModalV2({
       return
     }
 
+    // 박스무게 유효성 검증
+    if (!formData.box_weight || formData.box_weight.trim() === '') {
+      if (formData.product_type === '깻잎' && formData.product_variety === '바라') {
+        toast.error("무게를 입력해주세요.")
+      } else {
+        toast.error("박스무게를 선택해주세요.")
+      }
+      return
+    }
+
     try {
       setLoading(true)
       let result
@@ -209,11 +240,21 @@ export default function CollectionFormModalV2({
         onSuccess?.()
         onClose()
       } else {
-        toast.error(editData ? "접수 수정에 실패했습니다." : "접수 등록에 실패했습니다.")
+        const errorMessage = result.error || (editData ? "접수 수정에 실패했습니다." : "접수 등록에 실패했습니다.")
+        toast.error(errorMessage)
+        console.error("폼 제출 실패:")
+        console.error("- 결과:", result)
+        console.error("- 에러 메시지:", result.error)
+        console.error("- 폼 데이터:", formData)
       }
     } catch (err) {
-      console.error("접수 처리 오류:", err)
-      toast.error("오류가 발생했습니다.")
+      console.error("접수 처리 오류 상세:")
+      console.error("- 에러 객체:", err)
+      console.error("- 메시지:", err instanceof Error ? err.message : String(err))
+      console.error("- 스택:", err instanceof Error ? err.stack : undefined)
+      console.error("- 폼 데이터:", formData)
+      console.error("- 전체 에러:", JSON.stringify(err, Object.getOwnPropertyNames(err)))
+      toast.error(`오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setLoading(false)
     }
@@ -327,7 +368,7 @@ export default function CollectionFormModalV2({
                 />
               </div>
             ) : formData.product_type === '깻잎' && formData.product_variety === '바라' ? (
-              // 깻잎 바라: 수량 + 무게 직접입력
+              // 깻잎 바라: 수량 + 무게 선택
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="quantity">수량 *</Label>
@@ -344,22 +385,23 @@ export default function CollectionFormModalV2({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="box_weight">무게 (kg) *</Label>
-                  <input
-                    id="box_weight"
-                    type="text"
-                    inputMode="decimal"
-                    value={formData.box_weight || ""}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '')
-                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                        handleInputChange("box_weight", value)
-                      }
-                    }}
-                    placeholder="1.5"
+                  <Label htmlFor="box_weight">무게 선택 *</Label>
+                  <Select 
+                    value={formData.box_weight || ""} 
+                    onValueChange={(value) => handleInputChange("box_weight", value)}
                     disabled={loading}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="무게 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {['3kg', '3.5kg', '4kg', '4.5kg', '5kg'].map((weight) => (
+                        <SelectItem key={weight} value={weight}>
+                          {weight}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             ) : (
@@ -462,7 +504,7 @@ export default function CollectionFormModalV2({
                   {formData.product_type === '깻잎' && formData.product_variety === '정품' 
                     ? `수량: ${formData.quantity}`
                     : formData.product_type === '깻잎' && formData.product_variety === '바라'
-                    ? `수량: ${formData.quantity} × ${formData.box_weight}kg`
+                    ? `수량: ${formData.quantity} × ${formData.box_weight.replace(/kg/g, '')}kg`
                     : `박스: ${formData.quantity}박스 × ${formData.box_weight}`
                   }
                 </p>
