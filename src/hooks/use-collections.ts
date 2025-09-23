@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { Collection, CollectionInsert, Market, MarketRegion } from "@/lib/database.types"
 import { useAuth } from "@/contexts/auth-context"
+import { getKoreanToday } from "@/lib/date-utils"
 
 export function useCollections() {
   const [collections, setCollections] = useState<Collection[]>([])
@@ -125,6 +126,7 @@ export function useCollections() {
         .insert({
           ...collectionData,
           user_id: user.id,
+          status: collectionData.status || 'pending', // 기본값: 대기중
         })
         .select()
         .single()
@@ -239,9 +241,7 @@ export function useCollections() {
   // 오늘 통계 계산
   const getTodayStats = () => {
     // 한국 시간대(KST) 기준으로 오늘 날짜 계산
-    const now = new Date()
-    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)) // UTC+9
-    const today = koreaTime.toISOString().split('T')[0]
+    const today = getKoreanToday()
     const todayCollections = collections.filter(
       col => col.reception_date === today
     )

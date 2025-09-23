@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Collection, CollectionInsert, ProductType, MarketRegion } from "@/lib/database.types"
-import { createClient } from "@/lib/supabase"
+import { Collection, CollectionInsert, ProductType } from "@/lib/database.types"
 import { toast } from "sonner"
 import Loading from "@/components/ui/loading"
+import { getKoreanToday } from "@/lib/date-utils"
 
 interface ApiResponse {
   success: boolean
@@ -48,7 +48,7 @@ export default function CollectionFormModalV2({
 }: CollectionFormModalProps) {
   const [formData, setFormData] = useState<CollectionInsert>({
     producer_name: "",
-    reception_date: new Date().toISOString().split('T')[0],
+    reception_date: getKoreanToday(),
     product_type: "사과",
     product_variety: null,
     quantity: 0,
@@ -57,62 +57,17 @@ export default function CollectionFormModalV2({
     market: "",
   })
 
-  const [marketRegions, setMarketRegions] = useState<MarketRegion[]>([])
-  const [availableMarkets, setAvailableMarkets] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  
-  const supabase = createClient()
 
-  // 지역별 공판장 데이터 불러오기
-  useEffect(() => {
-    const fetchMarketRegions = async () => {
-      if (!supabase) {
-        console.warn('Supabase 클라이언트를 사용할 수 없습니다.')
-        return
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('market_regions')
-          .select('*')
-          .order('region', { ascending: true })
-          .order('market_name', { ascending: true })
-
-        if (error) {
-          console.error('공판장 지역 조회 오류:', error)
-          return
-        }
-
-        setMarketRegions(data || [])
-      } catch (err) {
-        console.error('공판장 지역 조회 중 오류:', err)
-      }
-    }
-
-    if (open) {
-      fetchMarketRegions()
-    }
-  }, [open, supabase])
-
-  // 선택된 지역에 따라 사용 가능한 공판장 업데이트
-  useEffect(() => {
-    if (formData.region) {
-      const markets = marketRegions
-        .filter(mr => mr.region === formData.region)
-        .map(mr => mr.market_name)
-        .filter(Boolean) as string[]
-      
-      setAvailableMarkets(markets)
-      
-      // 선택된 공판장이 새 지역에 없으면 초기화
-      if (!markets.includes(formData.market || '')) {
-        setFormData(prev => ({ ...prev, market: "" }))
-      }
-    } else {
-      setAvailableMarkets([])
-      setFormData(prev => ({ ...prev, market: "" }))
-    }
-  }, [formData.region, marketRegions])
+  // 공판장 목록 (하드코딩) - 왼쪽 세로, 오른쪽 세로 순서
+  const markets = [
+    "부산청과",
+    "항도청과", 
+    "엄궁농협공판장",
+    "반여농협공판장",
+    "중앙청과",
+    "동부청과"
+  ]
 
   // 품목 변경 시 품종 초기화
   useEffect(() => {
@@ -123,7 +78,14 @@ export default function CollectionFormModalV2({
         ...prev, 
         product_variety: "정품",
         region: "엄궁동",
-        market: "엄궁놈협공판장"
+        market: "엄궁농협공판장"
+      }))
+    } else if (formData.product_type === '감') {
+      setFormData(prev => ({ 
+        ...prev, 
+        product_variety: "단감",
+        region: "엄궁동",
+        market: "엄궁농협공판장"
       }))
     } else {
       setFormData(prev => ({ ...prev, product_variety: "" }))
@@ -149,7 +111,7 @@ export default function CollectionFormModalV2({
     if (editData) {
       setFormData({
         producer_name: editData.producer_name || "",
-        reception_date: editData.reception_date || new Date().toISOString().split('T')[0],
+        reception_date: editData.reception_date || getKoreanToday(),
         product_type: editData.product_type as ProductType || "사과",
         product_variety: editData.product_variety || null,
         quantity: editData.quantity || 0,
@@ -165,7 +127,7 @@ export default function CollectionFormModalV2({
     if (!open) {
       setFormData({
         producer_name: "",
-        reception_date: new Date().toISOString().split('T')[0],
+        reception_date: getKoreanToday(),
         product_type: "사과",
         product_variety: null,
         quantity: 0,
@@ -183,34 +145,27 @@ export default function CollectionFormModalV2({
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // 유효성 검증
+  // 유효성 검증 함수
+  const validateForm = () => {
     if (!formData.producer_name?.trim()) {
       toast.error("생산자명을 입력해주세요.")
-      return
-    }
-
-    if (!formData.region?.trim()) {
-      toast.error("지역을 선택해주세요.")
-      return
+      return false
     }
 
     if (!formData.market?.trim()) {
       toast.error("공판장을 선택해주세요.")
-      return
+      return false
     }
 
     if (!formData.quantity || formData.quantity <= 0) {
       toast.error("수량을 입력해주세요.")
-      return
+      return false
     }
 
     // 품종 유효성 검증
     if (formData.product_type !== '사과' && !formData.product_variety) {
       toast.error("품종을 선택해주세요.")
-      return
+      return false
     }
 
     // 박스무게 유효성 검증
@@ -220,23 +175,35 @@ export default function CollectionFormModalV2({
       } else {
         toast.error("박스무게를 선택해주세요.")
       }
-      return
+      return false
     }
 
+    return true
+  }
+
+  // 공통 제출 로직
+  const submitCollection = async (status: 'pending' | 'completed') => {
     try {
       setLoading(true)
       let result
 
+      const dataToSubmit = { ...formData, status }
+
       if (editData?.id) {
         // 수정 모드
-        result = await onUpdateCollection(editData.id, formData)
+        result = await onUpdateCollection(editData.id, dataToSubmit)
       } else {
         // 등록 모드
-        result = await onCreateCollection(formData)
+        result = await onCreateCollection(dataToSubmit)
       }
 
       if (result.success) {
-        toast.success(editData ? "접수가 수정되었습니다." : "접수가 등록되었습니다.")
+        const message = editData 
+          ? "접수가 수정되었습니다." 
+          : status === 'completed' 
+            ? "접수가 등록되고 완료 처리되었습니다."
+            : "접수가 등록되었습니다."
+        toast.success(message)
         onSuccess?.()
         onClose()
       } else {
@@ -245,7 +212,7 @@ export default function CollectionFormModalV2({
         console.error("폼 제출 실패:")
         console.error("- 결과:", result)
         console.error("- 에러 메시지:", result.error)
-        console.error("- 폼 데이터:", formData)
+        console.error("- 폼 데이터:", dataToSubmit)
       }
     } catch (err) {
       console.error("접수 처리 오류 상세:")
@@ -260,7 +227,20 @@ export default function CollectionFormModalV2({
     }
   }
 
-  const uniqueRegions = [...new Set(marketRegions.map(mr => mr.region).filter(Boolean))]
+  // 대기중 상태로 등록
+  const handleSubmitPending = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateForm()) return
+    await submitCollection('pending')
+  }
+
+  // 완료 상태로 등록
+  const handleSubmitCompleted = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateForm()) return
+    await submitCollection('completed')
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -271,7 +251,7 @@ export default function CollectionFormModalV2({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form className="space-y-6">
           {/* 1. 생산자 정보 */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">1. 생산자 정보</h3>
@@ -309,20 +289,21 @@ export default function CollectionFormModalV2({
             {/* 품목 선택 */}
             <div className="space-y-2">
               <Label>품목 *</Label>
-              <div className="flex gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {['사과', '감', '깻잎'].map((product) => (
-                  <label key={product} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="product_type"
-                      value={product}
-                      checked={formData.product_type === product}
-                      onChange={(e) => handleInputChange("product_type", e.target.value)}
-                      className="text-brand focus:ring-brand"
-                      disabled={loading}
-                    />
-                    <span>{product}</span>
-                  </label>
+                  <button
+                    key={product}
+                    type="button"
+                    onClick={() => handleInputChange("product_type", product)}
+                    className={`p-3 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${
+                      formData.product_type === product
+                        ? 'border-brand bg-green-50 text-brand'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                    disabled={loading}
+                  >
+                    {product}
+                  </button>
                 ))}
               </div>
             </div>
@@ -331,20 +312,21 @@ export default function CollectionFormModalV2({
             {formData.product_type !== '사과' && (
               <div className="space-y-2">
                 <Label>세부 품종 *</Label>
-                <div className="flex gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   {productVarieties[formData.product_type as keyof typeof productVarieties]?.map((variety: string) => (
-                    <label key={variety} className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        name="product_variety"
-                        value={variety}
-                        checked={formData.product_variety === variety}
-                        onChange={(e) => handleInputChange("product_variety", e.target.value)}
-                        className="text-brand focus:ring-brand"
-                        disabled={loading}
-                      />
-                      <span>{variety}</span>
-                    </label>
+                    <button
+                      key={variety}
+                      type="button"
+                      onClick={() => handleInputChange("product_variety", variety)}
+                      className={`p-3 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${
+                        formData.product_variety === variety
+                          ? 'border-brand bg-green-50 text-brand'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                      disabled={loading}
+                    >
+                      {variety}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -423,20 +405,21 @@ export default function CollectionFormModalV2({
                 </div>
                 <div className="space-y-2">
                   <Label>박스당 무게 *</Label>
-                  <div className="flex gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {['10kg', '5kg'].map((weight) => (
-                      <label key={weight} className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          name="box_weight"
-                          value={weight}
-                          checked={formData.box_weight === weight}
-                          onChange={(e) => handleInputChange("box_weight", e.target.value)}
-                          className="text-brand focus:ring-brand"
-                          disabled={loading}
-                        />
-                        <span>{weight}</span>
-                      </label>
+                      <button
+                        key={weight}
+                        type="button"
+                        onClick={() => handleInputChange("box_weight", weight)}
+                        className={`p-3 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${
+                          formData.box_weight === weight
+                            ? 'border-brand bg-green-50 text-brand'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                        disabled={loading}
+                      >
+                        {weight}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -446,49 +429,38 @@ export default function CollectionFormModalV2({
 
           {/* 3. 공판장 정보 */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold border-b pb-2">3. 공판장 정보</h3>
+            <h3 className="text-lg font-semibold border-b pb-2">3. 공판장 선택</h3>
             
-            <div className="grid grid-cols-2 gap-4">
-              {/* 지역 선택 */}
-              <div className="space-y-2">
-                <Label htmlFor="region">지역 *</Label>
-                <Select 
-                  value={formData.region || ""} 
-                  onValueChange={(value) => handleInputChange("region", value)}
-                  disabled={loading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="지역 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniqueRegions.filter(region => region !== null).map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {region}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 공판장 선택 */}
-              <div className="space-y-2">
-                <Label htmlFor="market">공판장 *</Label>
-                <Select 
-                  value={formData.market || ""} 
-                  onValueChange={(value) => handleInputChange("market", value)}
-                  disabled={loading || !formData.region}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="공판장 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMarkets.map((market) => (
-                      <SelectItem key={market} value={market}>
-                        {market}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2">
+              <Label>공판장 *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {markets.map((market) => (
+                  <button
+                    key={market}
+                    type="button"
+                    onClick={() => {
+                      handleInputChange("market", market)
+                      // 공판장에 따른 지역 설정
+                      const regionMap: Record<string, string> = {
+                        "부산청과": "남구",
+                        "항도청과": "서구",
+                        "엄궁농협공판장": "엄궁동",
+                        "반여농협공판장": "해운대구",
+                        "중앙청과": "동구",
+                        "동부청과": "동래구"
+                      }
+                      handleInputChange("region", regionMap[market] || "")
+                    }}
+                    className={`p-3 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${
+                      formData.market === market
+                        ? 'border-brand bg-green-50 text-brand'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                    disabled={loading}
+                  >
+                    {market}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -508,32 +480,80 @@ export default function CollectionFormModalV2({
                     : `박스: ${formData.quantity}박스 × ${formData.box_weight}`
                   }
                 </p>
-                <p>공판장: {formData.region} {formData.market}</p>
+                <p>공판장: {formData.market}</p>
               </div>
             </div>
           )}
 
           {/* 버튼 */}
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-              disabled={loading}
-            >
-              취소
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-brand hover:bg-green-700"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loading size="sm" className="mr-2" />
-              ) : null}
-              {editData ? "수정" : "등록"}
-            </Button>
+          <div className="space-y-3 pt-4">
+            {/* 편집 모드: 기존과 동일한 버튼 배치 */}
+            {editData ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  취소
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSubmitPending}
+                  className="flex-1 bg-brand hover:bg-green-700"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loading size="sm" className="mr-2" />
+                  ) : null}
+                  수정
+                </Button>
+              </div>
+            ) : (
+              /* 등록 모드: 3개 버튼 배치 */
+              <div className="space-y-2">
+                {/* 등록 버튼들 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleSubmitPending}
+                    variant="outline"
+                    className="w-full border-brand text-brand hover:bg-brand hover:text-white"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <Loading size="sm" className="mr-2" />
+                    ) : null}
+                    <span className="sm:hidden">등록 (대기)</span>
+                    <span className="hidden sm:inline">등록</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSubmitCompleted}
+                    className="w-full bg-brand hover:bg-green-700"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <Loading size="sm" className="mr-2" />
+                    ) : null}
+                    <span className="sm:hidden">등록 + 완료</span>
+                    <span className="hidden sm:inline">등록 + 완료</span>
+                  </Button>
+                </div>
+                {/* 취소 버튼 */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="w-full"
+                  disabled={loading}
+                >
+                  취소
+                </Button>
+              </div>
+            )}
           </div>
         </form>
       </DialogContent>

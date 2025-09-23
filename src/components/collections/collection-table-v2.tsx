@@ -12,13 +12,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  EllipsisVerticalIcon,
   PencilIcon,
   TrashIcon,
   CheckCircleIcon,
@@ -28,6 +21,7 @@ import { Collection, CollectionInsert } from "@/lib/database.types"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
+import CollectionCardMobile from "./collection-card-mobile"
 
 interface CollectionTableProps {
   collections: Collection[]
@@ -124,109 +118,129 @@ export default function CollectionTableV2({ collections, onEdit, onUpdate, onDel
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>생산자명</TableHead>
-            <TableHead>품목</TableHead>
-            <TableHead className="text-center">수량</TableHead>
-            <TableHead className="text-center">무게</TableHead>
-            <TableHead>지역/공판장</TableHead>
-            <TableHead className="text-center">접수일</TableHead>
-            <TableHead className="text-center">상태</TableHead>
-            <TableHead className="text-center">액션</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <>
+      {/* 모바일/태블릿 카드 레이아웃 */}
+      <div className="block md:hidden">
+        <div className="space-y-4">
           {collections.map((collection) => (
-            <TableRow key={collection.id}>
-              <TableCell className="font-medium">
-                {collection.producer_name}
-              </TableCell>
-              <TableCell>
-                {getProductBadge(collection.product_type, collection.product_variety)}
-              </TableCell>
-              <TableCell className="text-center">
-                {collection.product_type === '깻잎' && collection.product_variety === '정품' 
-                  ? collection.quantity || 0
-                  : `${collection.quantity || 0}박스`
-                }
-              </TableCell>
-              <TableCell className="text-center">
-                {collection.product_type === '깻잎' && collection.product_variety === '정품' ? (
-                  <span className="text-xs text-gray-500">-</span>
-                ) : (
-                  <Badge variant="secondary" className="text-xs">
-                    {collection.box_weight}
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="text-sm">
-                  <div className="font-medium">{collection.region}</div>
-                  <div className="text-gray-500">{collection.market}</div>
-                </div>
-              </TableCell>
-              <TableCell className="text-center">
-                {formatDate(collection.reception_date)}
-              </TableCell>
-              <TableCell className="text-center">
-                {getStatusBadge(collection.status)}
-              </TableCell>
-              <TableCell className="text-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-8 h-8 p-0"
-                      disabled={loading}
-                    >
-                      <EllipsisVerticalIcon className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    {/* 상태 변경 */}
-                    {collection.status === 'pending' ? (
-                      <DropdownMenuItem
-                        onClick={() => handleStatusChange(collection, 'completed')}
-                        className="text-green-600"
-                      >
-                        <CheckCircleIcon className="w-4 h-4 mr-2" />
-                        완료 처리
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem
-                        onClick={() => handleStatusChange(collection, 'pending')}
-                        className="text-orange-600"
-                      >
-                        <ClockIcon className="w-4 h-4 mr-2" />
-                        대기중으로 변경
-                      </DropdownMenuItem>
-                    )}
-                    
-                    {/* 수정 */}
-                    <DropdownMenuItem onClick={() => onEdit(collection)}>
-                      <PencilIcon className="w-4 h-4 mr-2" />
-                      수정
-                    </DropdownMenuItem>
-
-                    {/* 삭제 */}
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(collection)}
-                      className="text-red-600"
-                    >
-                      <TrashIcon className="w-4 h-4 mr-2" />
-                      삭제
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
+            <CollectionCardMobile
+              key={collection.id}
+              collection={collection}
+              onEdit={onEdit}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+            />
           ))}
-        </TableBody>
-      </Table>
-    </div>
+        </div>
+      </div>
+
+      {/* 데스크톱 테이블 레이아웃 */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>생산자명</TableHead>
+                <TableHead>품목</TableHead>
+                <TableHead className="text-center">수량</TableHead>
+                <TableHead className="text-center">무게</TableHead>
+                <TableHead>공판장</TableHead>
+                <TableHead className="text-center">접수일</TableHead>
+                <TableHead className="text-center">상태</TableHead>
+                <TableHead className="text-center">액션</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {collections.map((collection) => (
+                <TableRow key={collection.id}>
+                  <TableCell className="font-medium">
+                    {collection.producer_name}
+                  </TableCell>
+                  <TableCell>
+                    {getProductBadge(collection.product_type, collection.product_variety)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {collection.product_type === '깻잎' && collection.product_variety === '정품' 
+                      ? collection.quantity || 0
+                      : `${collection.quantity || 0}박스`
+                    }
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {collection.product_type === '깻잎' && collection.product_variety === '정품' ? (
+                      <span className="text-xs text-gray-500">-</span>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        {collection.box_weight}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div className="font-medium">{collection.market}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {formatDate(collection.reception_date)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getStatusBadge(collection.status)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1 min-w-[180px]">
+                      {/* 상태 변경 버튼 */}
+                      {collection.status === 'pending' ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleStatusChange(collection, 'completed')}
+                          className="h-7 text-xs px-2 bg-green-600 hover:bg-green-700 text-white"
+                          disabled={loading}
+                        >
+                          <CheckCircleIcon className="w-3 h-3 mr-1" />
+                          <span className="hidden lg:inline">완료</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleStatusChange(collection, 'pending')}
+                          className="h-7 text-xs px-2 bg-orange-600 hover:bg-orange-700 text-white"
+                          disabled={loading}
+                        >
+                          <ClockIcon className="w-3 h-3 mr-1" />
+                          <span className="hidden lg:inline">대기</span>
+                        </Button>
+                      )}
+                      
+                      {/* 수정 버튼 */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onEdit(collection)}
+                        className="h-7 text-xs px-2"
+                        disabled={loading}
+                      >
+                        <PencilIcon className="w-3 h-3 mr-1" />
+                        <span className="hidden lg:inline">수정</span>
+                      </Button>
+
+                      {/* 삭제 버튼 */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(collection)}
+                        className="h-7 text-xs px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        disabled={loading}
+                      >
+                        <TrashIcon className="w-3 h-3 mr-1" />
+                        <span className="hidden lg:inline">삭제</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </>
   )
 }

@@ -1,9 +1,10 @@
 import { Collection } from '@/lib/database.types'
+import { getKoreanToday } from '@/lib/date-utils'
 
 // 당일 완료된 항목만 추출하고 공판장별-품목별로 그룹화
 export const groupCompletedCollections = (collections: Collection[]) => {
-  // 1. 당일 완료된 항목만 필터링
-  const today = new Date().toISOString().split('T')[0]
+  // 1. 당일 완료된 항목만 필터링 (한국 시간 기준)
+  const today = getKoreanToday()
   const completedCollections = collections.filter(
     (collection) => collection.status === 'completed' && collection.reception_date === today
   )
@@ -40,7 +41,7 @@ export const groupCompletedCollections = (collections: Collection[]) => {
         market,
         productType,
         collections: productCollections,
-        fileName: `송품장_${market}_${productType}_${new Date().toISOString().split('T')[0]}.pdf`
+        fileName: `송품장_${market}_${productType}_${getKoreanToday()}.pdf`
       })
     }
   }

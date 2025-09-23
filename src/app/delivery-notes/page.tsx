@@ -21,13 +21,15 @@ import Loading from "@/components/ui/loading"
 import { groupCompletedCollections, DeliveryNoteGroup } from "@/lib/delivery-note-utils"
 import { downloadSelectedDeliveryNotesPDFLib } from "@/lib/pdf-lib-utils"
 import { toast } from "sonner"
+import { getKoreanToday } from "@/lib/date-utils"
 
 export default function DeliveryNotesPage() {
   const { user, loading: authLoading } = useAuth()
-  const { collections, loading: collectionsLoading } = useCollections()
+  const { collections, loading: collectionsLoading, fetchCollections } = useCollections()
   const [groups, setGroups] = useState<DeliveryNoteGroup[]>([])
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [currentDate, setCurrentDate] = useState(getKoreanToday())
   const router = useRouter()
 
   // 인증 확인
@@ -36,6 +38,25 @@ export default function DeliveryNotesPage() {
       router.push("/login")
     }
   }, [user, authLoading, router])
+
+  // 날짜 자동 갱신을 위한 useEffect
+  useEffect(() => {
+    const checkDate = () => {
+      const newDate = getKoreanToday()
+      if (newDate !== currentDate) {
+        setCurrentDate(newDate)
+        // 날짜가 바뀌면 데이터를 다시 불러옴
+        if (user) {
+          fetchCollections()
+        }
+      }
+    }
+
+    // 매분마다 날짜 확인 (자정을 지나면서 날짜가 바뀔 때를 감지)
+    const interval = setInterval(checkDate, 60000) // 1분마다 체크
+
+    return () => clearInterval(interval)
+  }, [currentDate, user, fetchCollections])
 
   // 그룹 데이터 업데이트
   useEffect(() => {
@@ -104,9 +125,9 @@ export default function DeliveryNotesPage() {
     }
   }
 
-  // 뒤로가기
+  // 뒤로가기 (메인 페이지로 이동)
   const handleGoBack = () => {
-    router.back()
+    router.push('/')
   }
 
   // 품목 표시용 헬퍼 함수
