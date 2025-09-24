@@ -109,9 +109,9 @@ export default function Home() {
 
   return (
     <MainLayout user={user ? { name: user.name, email: user.email, role: user.role || 'user' } : null}>
-      <div className="space-y-6">
-        {/* 페이지 헤더 */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col gap-6">
+        {/* 페이지 헤더 - 모든 화면에서 최상단 */}
+        <div className="order-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">수거관리</h1>
             <p className="text-sm sm:text-base text-gray-600">사과 수거 현황을 관리합니다</p>
@@ -125,8 +125,62 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* 요약 통계 카드들 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        {/* 접수 목록 영역 - 모바일에서 2순위, PC에서 3순위 */}
+        <div className="order-2 md:order-3">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <CardTitle className="text-lg sm:text-xl">접수 목록</CardTitle>
+                <Button
+                  variant="outline"
+                  onClick={handleDeliveryNotes}
+                  className="flex items-center gap-2 w-full sm:w-auto"
+                  size="sm"
+                >
+                  <DocumentTextIcon className="w-4 h-4" />
+                  <span className="sm:hidden">송품장</span>
+                  <span className="hidden sm:inline">송품장 출력</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {collectionsLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loading size="md" />
+                </div>
+              ) : (
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="today" className="text-xs sm:text-sm">
+                      <span className="sm:hidden">전체 ({stats.total})</span>
+                      <span className="hidden sm:inline">당일 전체 ({stats.total})</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" className="text-xs sm:text-sm">
+                      <span className="sm:hidden">대기 ({stats.pending})</span>
+                      <span className="hidden sm:inline">당일 대기중 ({stats.pending})</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="completed" className="text-xs sm:text-sm">
+                      <span className="sm:hidden">완료 ({stats.completed})</span>
+                      <span className="hidden sm:inline">당일 완료 ({stats.completed})</span>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value={activeTab} className="mt-6">
+                    <CollectionTableV2
+                      collections={filteredCollections}
+                      onEdit={handleEditCollection}
+                      onUpdate={updateCollection}
+                      onDelete={deleteCollection}
+                    />
+                  </TabsContent>
+                </Tabs>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 요약 통계 카드들 - 모바일에서 3순위, PC에서 2순위 */}
+        <div className="order-3 md:order-2 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium text-gray-500">
@@ -166,67 +220,15 @@ export default function Home() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium text-gray-500">
-                총 박스수
+                완료율
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-blue-600">{stats.totalQuantity}박스</div>
-              <p className="text-xs text-gray-500 hidden sm:block">5kg({stats.boxes5kg}) + 10kg({stats.boxes10kg})</p>
+              <div className="text-lg sm:text-2xl font-bold text-purple-600">{stats.completionRate}%</div>
+              <p className="text-xs text-gray-500 hidden sm:block">완료 {stats.completed}건 / 전체 {stats.total}건</p>
             </CardContent>
           </Card>
         </div>
-
-        {/* 접수 목록 영역 */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-              <CardTitle className="text-lg sm:text-xl">접수 목록</CardTitle>
-              <Button
-                variant="outline"
-                onClick={handleDeliveryNotes}
-                className="flex items-center gap-2 w-full sm:w-auto"
-                size="sm"
-              >
-                <DocumentTextIcon className="w-4 h-4" />
-                <span className="sm:hidden">송품장</span>
-                <span className="hidden sm:inline">송품장 출력</span>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {collectionsLoading ? (
-              <div className="flex justify-center py-12">
-                <Loading size="md" />
-              </div>
-            ) : (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="today" className="text-xs sm:text-sm">
-                    <span className="sm:hidden">전체 ({stats.total})</span>
-                    <span className="hidden sm:inline">당일 전체 ({stats.total})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="text-xs sm:text-sm">
-                    <span className="sm:hidden">대기 ({stats.pending})</span>
-                    <span className="hidden sm:inline">당일 대기중 ({stats.pending})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="completed" className="text-xs sm:text-sm">
-                    <span className="sm:hidden">완료 ({stats.completed})</span>
-                    <span className="hidden sm:inline">당일 완료 ({stats.completed})</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value={activeTab} className="mt-6">
-                  <CollectionTableV2
-                    collections={filteredCollections}
-                    onEdit={handleEditCollection}
-                    onUpdate={updateCollection}
-                    onDelete={deleteCollection}
-                  />
-                </TabsContent>
-              </Tabs>
-            )}
-          </CardContent>
-        </Card>
 
         {/* 접수 등록/수정 모달 */}
         <CollectionFormModalV2

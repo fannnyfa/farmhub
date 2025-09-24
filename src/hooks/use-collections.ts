@@ -246,10 +246,18 @@ export function useCollections() {
       col => col.reception_date === today
     )
 
+    const total = todayCollections.length
+    const completed = todayCollections.filter(col => col.status === 'completed').length
+    const pending = todayCollections.filter(col => col.status === 'pending').length
+
+    // 완료율 계산 (전체가 0일 때는 0%로 표시)
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
+
     return {
-      total: todayCollections.length,
-      pending: todayCollections.filter(col => col.status === 'pending').length,
-      completed: todayCollections.filter(col => col.status === 'completed').length,
+      total,
+      pending,
+      completed,
+      completionRate, // 완료율 추가
       totalQuantity: todayCollections.reduce((sum, col) => sum + (col.quantity || 0), 0),
       boxes5kg: todayCollections.filter(col => col.box_weight === '5kg').reduce((sum, col) => sum + (col.quantity || 0), 0),
       boxes10kg: todayCollections.filter(col => col.box_weight === '10kg').reduce((sum, col) => sum + (col.quantity || 0), 0),

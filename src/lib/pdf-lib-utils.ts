@@ -489,8 +489,8 @@ export const generateDeliveryNotePDFLib = async (group: DeliveryNoteGroup): Prom
       shippingInfo.calculations.forEach((calc) => {
         if (calc.quantity > 0) {
           const unitText = useKoreanFont 
-            ? (calc.productType === '깻잎' && calc.variety === '정품' ? '장' : '박스')
-            : (calc.productType === '깻잎' && calc.variety === '정품' ? 'sheets' : 'boxes')
+            ? (calc.productType === '깻잎' && calc.variety === '바라' ? '개' : '박스')
+            : (calc.productType === '깻잎' && calc.variety === '바라' ? 'pieces' : 'boxes')
           
           const wonText = useKoreanFont ? '원' : 'KRW'
           const productDisplay = useKoreanFont ? calc.displayText : 
@@ -972,8 +972,8 @@ export const generateDeliveryNotePDFBlob = async (group: DeliveryNoteGroup): Pro
       shippingInfo.calculations.forEach((calc) => {
         if (calc.quantity > 0) {
           const unitText = useKoreanFont 
-            ? (calc.productType === '깻잎' && calc.variety === '정품' ? '장' : '박스')
-            : (calc.productType === '깻잎' && calc.variety === '정품' ? 'sheets' : 'boxes')
+            ? (calc.productType === '깻잎' && calc.variety === '바라' ? '개' : '박스')
+            : (calc.productType === '깻잎' && calc.variety === '바라' ? 'pieces' : 'boxes')
           
           const wonText = useKoreanFont ? '원' : 'KRW'
           const productDisplay = useKoreanFont ? calc.displayText : 
