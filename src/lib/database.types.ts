@@ -211,3 +211,11 @@ export type ProductVariety = {
   감: '단감' | '약시' | '대봉'
   깻잎: '정품' | '바라'
 }
+
+// 사용자 정보가 포함된 Collection 타입
+export interface CollectionWithUser extends Collection {
+  users?: {
+    name: string
+    email: string
+  } | null
+}

@@ -11,15 +11,16 @@ import {
   ClockIcon,
   MapPinIcon,
   CalendarIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline"
-import { Collection, CollectionInsert } from "@/lib/database.types"
+import { CollectionWithUser, CollectionInsert } from "@/lib/database.types"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 
 interface CollectionCardMobileProps {
-  collection: Collection
-  onEdit: (collection: Collection) => void
+  collection: CollectionWithUser
+  onEdit: (collection: CollectionWithUser) => void
   onUpdate: (id: string, updates: Partial<CollectionInsert>) => Promise<{ success: boolean }>
   onDelete: (id: string) => Promise<{ success: boolean }>
 }
@@ -106,10 +107,10 @@ export default function CollectionCardMobile({
 
   const getQuantityDisplay = () => {
     if (collection.product_type === '깻잎' && collection.product_variety === '정품') {
-      return `${collection.quantity || 0}장`
+      return `${collection.quantity || 0}박스`
     } else if (collection.product_type === '깻잎' && collection.product_variety === '바라') {
       const weight = collection.box_weight || ''
-      return `${collection.quantity || 0}장 (${weight})`
+      return `${collection.quantity || 0}개 (${weight})`
     } else {
       const weight = collection.box_weight || ''
       return `${collection.quantity || 0}박스 (${weight})`
@@ -159,6 +160,24 @@ export default function CollectionCardMobile({
             </span>
             <div className="text-right">
               <div className="font-medium text-gray-900 text-sm">{collection.market}</div>
+            </div>
+          </div>
+
+          {/* 등록자 정보 */}
+          <div className="flex items-start justify-between">
+            <span className="text-sm text-gray-600 flex items-center">
+              <UserIcon className="w-3 h-3 mr-1" />
+              등록자
+            </span>
+            <div className="text-right">
+              <div className="font-medium text-gray-900 text-sm">
+                {collection.users?.name || '알 수 없음'}
+              </div>
+              {collection.users?.email && (
+                <div className="text-xs text-gray-500">
+                  {collection.users.email}
+                </div>
+              )}
             </div>
           </div>
 

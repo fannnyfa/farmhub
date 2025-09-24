@@ -68,7 +68,7 @@ export default function LoginForm() {
             <span className="text-white font-bold text-lg">FH</span>
           </div>
           <CardTitle className="text-2xl font-bold">팜허브 로그인</CardTitle>
-          <p className="text-gray-600">사과 물류 관리 시스템</p>
+          <p className="text-gray-600">팀 협업 물류 관리 시스템</p>
         </CardHeader>
         
         <CardContent>

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
-import { Collection, CollectionInsert, Market, MarketRegion } from "@/lib/database.types"
+import { Collection, CollectionInsert, CollectionWithUser, Market, MarketRegion } from "@/lib/database.types"
 import { useAuth } from "@/contexts/auth-context"
 import { getKoreanToday } from "@/lib/date-utils"
 
 export function useCollections() {
-  const [collections, setCollections] = useState<Collection[]>([])
+  const [collections, setCollections] = useState<CollectionWithUser[]>([])
   const [markets, setMarkets] = useState<Market[]>([])
   const [marketRegions, setMarketRegions] = useState<MarketRegion[]>([])
   const [loading, setLoading] = useState(false)
@@ -67,7 +67,7 @@ export function useCollections() {
     }
   }
 
-  // 접수 목록 불러오기
+  // 접수 목록 불러오기 (전체 팀 데이터 공유)
   const fetchCollections = async () => {
     if (!user || !supabase) {
       if (!supabase) console.warn('Supabase 클라이언트를 사용할 수 없습니다.')
@@ -80,8 +80,10 @@ export function useCollections() {
 
       const { data, error: fetchError } = await supabase
         .from('collections')
-        .select('*')
-        .eq('user_id', user.id)
+        .select(`
+          *,
+          users!collections_user_id_fkey(name, email)
+        `)
         .order('created_at', { ascending: false })
 
       if (fetchError) {
@@ -177,7 +179,6 @@ export function useCollections() {
         .from('collections')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user?.id)
         .select()
         .single()
 
@@ -217,7 +218,6 @@ export function useCollections() {
         .from('collections')
         .delete()
         .eq('id', id)
-        .eq('user_id', user?.id)
 
       if (deleteError) {
         setError('접수 삭제 중 오류가 발생했습니다.')

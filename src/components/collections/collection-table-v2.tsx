@@ -17,15 +17,15 @@ import {
   CheckCircleIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline"
-import { Collection, CollectionInsert } from "@/lib/database.types"
+import { Collection, CollectionInsert, CollectionWithUser } from "@/lib/database.types"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import CollectionCardMobile from "./collection-card-mobile"
 
 interface CollectionTableProps {
-  collections: Collection[]
-  onEdit: (collection: Collection) => void
+  collections: CollectionWithUser[]
+  onEdit: (collection: CollectionWithUser) => void
   onUpdate: (id: string, updates: Partial<CollectionInsert>) => Promise<{ success: boolean }>
   onDelete: (id: string) => Promise<{ success: boolean }>
 }
@@ -33,7 +33,7 @@ interface CollectionTableProps {
 export default function CollectionTableV2({ collections, onEdit, onUpdate, onDelete }: CollectionTableProps) {
   const [loading, setLoading] = useState(false)
 
-  const handleStatusChange = async (collection: Collection, newStatus: 'pending' | 'completed') => {
+  const handleStatusChange = async (collection: CollectionWithUser, newStatus: 'pending' | 'completed') => {
     setLoading(true)
     try {
       const result = await onUpdate(collection.id, { status: newStatus })
@@ -109,9 +109,9 @@ export default function CollectionTableV2({ collections, onEdit, onUpdate, onDel
   if (collections.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">접수된 내역이 없습니다.</p>
+        <p className="text-gray-500">팀에서 접수된 내역이 없습니다.</p>
         <p className="text-sm text-gray-400 mt-2">
-          우측 상단의 &apos;접수 등록&apos; 버튼을 눌러 새로운 접수를 등록해보세요.
+          팀원 누구나 &apos;접수 등록&apos; 버튼을 눌러 새로운 접수를 등록할 수 있습니다.
         </p>
       </div>
     )
@@ -145,6 +145,7 @@ export default function CollectionTableV2({ collections, onEdit, onUpdate, onDel
                 <TableHead className="text-center">수량</TableHead>
                 <TableHead className="text-center">무게</TableHead>
                 <TableHead>공판장</TableHead>
+                <TableHead className="text-center">등록자</TableHead>
                 <TableHead className="text-center">접수일</TableHead>
                 <TableHead className="text-center">상태</TableHead>
                 <TableHead className="text-center">액션</TableHead>
@@ -161,7 +162,9 @@ export default function CollectionTableV2({ collections, onEdit, onUpdate, onDel
                   </TableCell>
                   <TableCell className="text-center">
                     {collection.product_type === '깻잎' && collection.product_variety === '정품' 
-                      ? collection.quantity || 0
+                      ? `${collection.quantity || 0}박스`
+                      : collection.product_type === '깻잎' && collection.product_variety === '바라'
+                      ? `${collection.quantity || 0}개`
                       : `${collection.quantity || 0}박스`
                     }
                   </TableCell>
@@ -177,6 +180,16 @@ export default function CollectionTableV2({ collections, onEdit, onUpdate, onDel
                   <TableCell>
                     <div className="text-sm">
                       <div className="font-medium">{collection.market}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-700">
+                        {collection.users?.name || '알 수 없음'}
+                      </div>
+                      <div className="text-xs text-gray-500 hidden lg:block">
+                        {collection.users?.email}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">

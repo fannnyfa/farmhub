@@ -12,14 +12,14 @@ import { useCollections } from "@/hooks/use-collections"
 import Loading from "@/components/ui/loading"
 import CollectionFormModalV2 from "@/components/collections/collection-form-modal-v2"
 import CollectionTableV2 from "@/components/collections/collection-table-v2"
-import { Collection } from "@/lib/database.types"
+import { CollectionWithUser } from "@/lib/database.types"
 import { getKoreanToday } from "@/lib/date-utils"
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
   const { collections, loading: collectionsLoading, getTodayStats, fetchCollections, updateCollection, deleteCollection, createCollection } = useCollections()
   const [showModal, setShowModal] = useState(false)
-  const [editingCollection, setEditingCollection] = useState<Collection | null>(null)
+  const [editingCollection, setEditingCollection] = useState<CollectionWithUser | null>(null)
   const [activeTab, setActiveTab] = useState("today")
   const [currentDate, setCurrentDate] = useState(getKoreanToday())
   const router = useRouter()
@@ -66,7 +66,7 @@ export default function Home() {
     setShowModal(true)
   }
 
-  const handleEditCollection = (collection: Collection) => {
+  const handleEditCollection = (collection: CollectionWithUser) => {
     setEditingCollection(collection)
     setShowModal(true)
   }
@@ -113,8 +113,8 @@ export default function Home() {
         {/* 페이지 헤더 - 모든 화면에서 최상단 */}
         <div className="order-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">수거관리</h1>
-            <p className="text-sm sm:text-base text-gray-600">사과 수거 현황을 관리합니다</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">팀 수거관리</h1>
+            <p className="text-sm sm:text-base text-gray-600">팀 전체 수거 현황을 실시간으로 공유하고 관리합니다</p>
           </div>
           <Button 
             className="bg-brand hover:bg-green-700 w-full sm:w-auto"
@@ -130,7 +130,7 @@ export default function Home() {
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                <CardTitle className="text-lg sm:text-xl">접수 목록</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">팀 접수 목록</CardTitle>
                 <Button
                   variant="outline"
                   onClick={handleDeliveryNotes}

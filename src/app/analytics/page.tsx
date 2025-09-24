@@ -55,8 +55,8 @@ export default function AnalyticsPage() {
         {/* 페이지 헤더 */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">데이터 분석</h1>
-            <p className="text-sm sm:text-base text-gray-600">수거 데이터 통계 및 트렌드 분석</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">팀 데이터 분석</h1>
+            <p className="text-sm sm:text-base text-gray-600">팀 전체 수거 데이터 통계 및 트렌드 분석</p>
           </div>
         </div>
 

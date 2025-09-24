@@ -40,13 +40,13 @@ export default function Navbar({ user: propUser }: NavbarProps) {
 
   const navigation = [
     {
-      name: "수거관리",
+      name: "팀 수거관리",
       href: "/",
       icon: ClipboardDocumentListIcon,
       current: pathname === "/",
     },
     {
-      name: "데이터분석",
+      name: "팀 데이터분석",
       href: "/analytics",
       icon: ChartBarIcon,
       current: pathname === "/analytics",
