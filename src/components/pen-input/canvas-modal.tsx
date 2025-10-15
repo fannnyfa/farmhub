@@ -395,10 +395,14 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
       
       if (recognizedText.trim()) {
         onRecognize(recognizedText)
-        toast.success('텍스트 인식이 완료되었습니다!')
+        toast.success(`✅ '${recognizedText}' 인식 완료!`)
         onClose()
       } else {
-        toast.warning('인식된 텍스트가 없습니다. 더 명확하게 작성해주세요.')
+        toast.error('❌ 인식 실패! 다음 방법을 시도해보세요:', {
+          description: '• 한 글자씩 떨어뜨려서 쓰기\n• 더 굵고 진하게 쓰기\n• 정자로 또박또박 쓰기',
+          duration: 5000
+        })
+        setShowGuide(true) // 가이드 다시 표시
       }
 
     } catch (error) {
@@ -462,9 +466,14 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
                   </div>
                   
                   {/* 안내 텍스트 */}
-                  <div className="text-gray-500 space-y-1">
-                    <p className="text-sm font-medium">이 영역에 이름을 크게 작성하세요</p>
-                    <p className="text-xs">예: 김철수</p>
+                  <div className="text-gray-500 space-y-2">
+                    <p className="text-sm font-medium">📝 이름을 크고 명확하게 작성하세요</p>
+                    <div className="text-xs space-y-1">
+                      <p>✅ 한 글자씩 떨어뜨려서 쓰세요</p>
+                      <p>✅ 굵고 진하게 작성하세요</p>
+                      <p>✅ 정자로 또박또박 쓰세요</p>
+                      <p className="text-brand font-medium">예: 김 철 수</p>
+                    </div>
                   </div>
                 </div>
               </div>
