@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { X, RotateCcw, Check, Trash2, Undo2 } from 'lucide-react'
+import { X, Check, Trash2, Undo2 } from 'lucide-react'
 import { recognizeText, preprocessImage } from '@/lib/ocr-utils'
 import { toast } from 'sonner'
 

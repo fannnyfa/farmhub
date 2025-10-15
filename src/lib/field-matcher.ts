@@ -191,7 +191,7 @@ function removeDuplicates(matches: FieldMatch[]): FieldMatch[] {
  * 매칭 결과를 사용자 친화적인 메시지로 변환
  */
 export function generateMatchMessage(match: FieldMatch): string {
-  const fieldNames: Record<keyof CollectionInsert, string> = {
+  const fieldNames: Partial<Record<keyof CollectionInsert, string>> = {
     producer_name: '생산자명',
     reception_date: '접수일',
     product_type: '품목',
@@ -219,7 +219,13 @@ export function matchesToFormData(matches: FieldMatch[]): Partial<CollectionInse
 
   matches.forEach(match => {
     if (match.confidence >= 0.6) { // 신뢰도 60% 이상만 적용
-      ;(formData as any)[match.field] = match.value
+      // TypeScript-safe property assignment
+      if (match.field in formData || match.field === 'producer_name' || match.field === 'reception_date' || 
+          match.field === 'product_type' || match.field === 'product_variety' || match.field === 'quantity' || 
+          match.field === 'box_weight' || match.field === 'region' || match.field === 'market' || 
+          match.field === 'user_id' || match.field === 'status') {
+        formData[match.field] = match.value as never
+      }
     }
   })
 

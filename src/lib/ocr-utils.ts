@@ -18,16 +18,7 @@ export async function recognizeText(imageData: string | File): Promise<string> {
           if (process.env.NODE_ENV === 'development') {
             console.log('OCR 진행:', m)
           }
-        },
-        tessedit_pageseg_mode: Tesseract.PSM.SINGLE_WORD, // 단일 단어 모드 (이름 최적화)
-        tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY, // LSTM 엔진만 사용 (정확도 향상)
-        tessedit_char_whitelist: '가-힣', // 한글만 허용 (노이즈 제거)
-        preserve_interword_spaces: '0', // 단어 간 공백 제거
-        // 한글 인식 최적화 설정
-        user_defined_dpi: '300', // 높은 DPI 설정
-        tessedit_create_hocr: '0', // HOCR 출력 비활성화 (속도 향상)
-        tessedit_create_tsv: '0', // TSV 출력 비활성화
-        tessedit_create_pdf: '0', // PDF 출력 비활성화
+        }
       }
     )
 

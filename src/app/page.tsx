@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label"
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
-  const { collections, loading: collectionsLoading, getTodayStats, getDateStats, fetchCollections, updateCollection, deleteCollection, createCollection } = useCollections()
+  const { collections, loading: collectionsLoading, getDateStats, fetchCollections, updateCollection, deleteCollection, createCollection } = useCollections()
   const [showModal, setShowModal] = useState(false)
   const [editingCollection, setEditingCollection] = useState<CollectionWithUser | null>(null)
   const [activeTab, setActiveTab] = useState("today")
