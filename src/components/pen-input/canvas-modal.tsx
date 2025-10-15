@@ -3,9 +3,29 @@
 import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { X, RotateCcw, Check, Trash2 } from 'lucide-react'
+import { X, RotateCcw, Check, Trash2, Undo2 } from 'lucide-react'
 import { recognizeText, preprocessImage } from '@/lib/ocr-utils'
 import { toast } from 'sonner'
+
+// 좌표점 인터페이스
+interface Point {
+  x: number
+  y: number
+}
+
+// 그리기 스타일 인터페이스
+interface DrawStyle {
+  color: string
+  width: number
+  lineCap: CanvasLineCap
+  lineJoin: CanvasLineJoin
+}
+
+// 한 획(stroke) 인터페이스
+interface Stroke {
+  points: Point[]
+  style: DrawStyle
+}
 
 interface CanvasModalProps {
   isOpen: boolean
@@ -17,9 +37,30 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [showGuide, setShowGuide] = useState(true)
+  
+  // 획 히스토리 관리
+  const [strokes, setStrokes] = useState<Stroke[]>([])
+  const [currentStroke, setCurrentStroke] = useState<Point[]>([])
+  
+  // 기본 그리기 스타일
+  const defaultDrawStyle: DrawStyle = {
+    color: '#000000',
+    width: 4,
+    lineCap: 'round',
+    lineJoin: 'round'
+  }
+
+  // 최대 히스토리 개수 (메모리 관리)
+  const MAX_STROKES = 50
 
   useEffect(() => {
     if (isOpen) {
+      // 모달이 열릴 때 가이드 다시 표시 및 히스토리 초기화
+      setShowGuide(true)
+      setStrokes([])
+      setCurrentStroke([])
+      
       // 모달 DOM이 완전히 렌더링된 후 캔버스 초기화
       const initializeCanvas = () => {
         clearCanvas()
@@ -68,6 +109,13 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
     }
   }, [isOpen])
 
+  // strokes 상태 변경 시 캔버스 재그리기
+  useEffect(() => {
+    if (isOpen) {
+      redrawCanvas()
+    }
+  }, [strokes, isOpen])
+
   const clearCanvas = () => {
     const canvas = canvasRef.current
     if (!canvas) {
@@ -80,6 +128,10 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
       console.warn('캔버스 컨텍스트를 가져올 수 없습니다')
       return
     }
+
+    // 히스토리 초기화
+    setStrokes([])
+    setCurrentStroke([])
 
     // 캔버스 크기를 정확히 설정 (DPI 고려)
     const rect = canvas.getBoundingClientRect()
@@ -104,15 +156,15 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
     // 컨텍스트 스케일링
     ctx.scale(devicePixelRatio, devicePixelRatio)
 
-    // 흰색 배경으로 초기화
+    // 흰색 배경으로 초기화 (가이드 없는 깨끗한 캔버스)
     ctx.fillStyle = 'white'
     ctx.fillRect(0, 0, rect.width, rect.height)
 
     // 그리기 설정
-    ctx.strokeStyle = '#000000'
-    ctx.lineWidth = 3
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
+    ctx.strokeStyle = defaultDrawStyle.color
+    ctx.lineWidth = defaultDrawStyle.width
+    ctx.lineCap = defaultDrawStyle.lineCap
+    ctx.lineJoin = defaultDrawStyle.lineJoin
   }
 
   // 정확한 좌표 계산 헬퍼 함수
@@ -150,6 +202,65 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
     return { x: boundedX, y: boundedY }
   }
 
+  // 캔버스 재그리기 함수 (히스토리 기반)
+  const redrawCanvas = () => {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+
+    // 캔버스 클리어
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // 배경 다시 그리기
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1))
+    
+    // 모든 완성된 획 다시 그리기
+    strokes.forEach(stroke => {
+      if (stroke.points.length > 1) {
+        ctx.strokeStyle = stroke.style.color
+        ctx.lineWidth = stroke.style.width
+        ctx.lineCap = stroke.style.lineCap
+        ctx.lineJoin = stroke.style.lineJoin
+        
+        ctx.beginPath()
+        ctx.moveTo(stroke.points[0].x, stroke.points[0].y)
+        stroke.points.forEach((point, index) => {
+          if (index > 0) {
+            ctx.lineTo(point.x, point.y)
+          }
+        })
+        ctx.stroke()
+      }
+    })
+
+    // 현재 그리고 있는 획 그리기
+    if (currentStroke.length > 1) {
+      ctx.strokeStyle = defaultDrawStyle.color
+      ctx.lineWidth = defaultDrawStyle.width
+      ctx.lineCap = defaultDrawStyle.lineCap
+      ctx.lineJoin = defaultDrawStyle.lineJoin
+      
+      ctx.beginPath()
+      ctx.moveTo(currentStroke[0].x, currentStroke[0].y)
+      currentStroke.forEach((point, index) => {
+        if (index > 0) {
+          ctx.lineTo(point.x, point.y)
+        }
+      })
+      ctx.stroke()
+    }
+  }
+
+  // 마지막 획 되돌리기 함수
+  const undoLastStroke = () => {
+    if (strokes.length > 0) {
+      setStrokes(prev => prev.slice(0, -1))
+      console.log('획 되돌리기 완료, 남은 획 수:', strokes.length - 1)
+      // 캔버스 재그리기는 useEffect에서 자동으로 처리됨
+    }
+  }
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     // 다중 터치 체크 (터치인 경우)
     if ('touches' in e && e.touches.length > 1) {
@@ -179,6 +290,12 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
 
   const startDrawingInternal = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true)
+    
+    // 그리기 시작 시 가이드 숨김
+    if (showGuide) {
+      setShowGuide(false)
+    }
+    
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -188,6 +305,15 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
     const { x, y } = getCoordinates(e)
     console.log('그리기 시작 좌표:', { x, y })
 
+    // 새로운 획 시작
+    setCurrentStroke([{ x, y }])
+
+    // 캔버스에 즉시 그리기 시작
+    ctx.strokeStyle = defaultDrawStyle.color
+    ctx.lineWidth = defaultDrawStyle.width
+    ctx.lineCap = defaultDrawStyle.lineCap
+    ctx.lineJoin = defaultDrawStyle.lineJoin
+    
     ctx.beginPath()
     ctx.moveTo(x, y)
   }
@@ -209,6 +335,10 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
 
     const { x, y } = getCoordinates(e)
 
+    // 현재 획에 점 추가
+    setCurrentStroke(prev => [...prev, { x, y }])
+
+    // 캔버스에 즉시 그리기
     ctx.lineTo(x, y)
     ctx.stroke()
   }
@@ -218,6 +348,27 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
       e.preventDefault()
       e.stopPropagation()
     }
+    
+    // 그리기 종료 시 현재 획을 히스토리에 저장
+    if (isDrawing && currentStroke.length > 0) {
+      const stroke: Stroke = {
+        points: [...currentStroke],
+        style: { ...defaultDrawStyle }
+      }
+      
+      setStrokes(prev => {
+        const newStrokes = [...prev, stroke]
+        // 최대 히스토리 개수 제한 (메모리 관리)
+        const limitedStrokes = newStrokes.length > MAX_STROKES 
+          ? newStrokes.slice(-MAX_STROKES) 
+          : newStrokes
+        console.log('획 추가 완료, 총 획 수:', limitedStrokes.length)
+        return limitedStrokes
+      })
+      
+      setCurrentStroke([])
+    }
+    
     setIsDrawing(false)
   }
 
@@ -260,24 +411,24 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-full max-h-full w-screen h-screen p-0 gap-0">
+      <DialogContent className="max-w-md w-full h-96 p-0 gap-0">
         <DialogHeader className="p-4 border-b bg-white">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold text-brand">
-              ✏️ 터치입력
+            <DialogTitle className="text-lg font-bold text-brand">
+              ✏️ 생산자명 입력
             </DialogTitle>
             <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            펜이나 손가락으로 생산자명, 품목, 수량 등을 자유롭게 작성해주세요.
+            펜이나 손가락으로 생산자명을 작성해주세요.
           </p>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col bg-gray-50">
           {/* 캔버스 영역 */}
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-4 relative">
             <canvas
               ref={canvasRef}
               className="w-full h-full bg-white border-2 border-gray-200 rounded-lg shadow-sm cursor-crosshair"
@@ -299,34 +450,71 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
                 msUserSelect: 'none'           // IE 지원
               }}
             />
+            
+            {/* HTML 오버레이 가이드 (OCR에 포함되지 않음) */}
+            {showGuide && (
+              <div className="absolute inset-4 pointer-events-none flex items-center justify-center">
+                <div className="text-center">
+                  {/* 가이드 박스 */}
+                  <div className="relative mx-auto w-48 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center mb-4">
+                    {/* 베이스라인 */}
+                    <div className="absolute bottom-4 left-4 right-4 h-px bg-gray-200"></div>
+                  </div>
+                  
+                  {/* 안내 텍스트 */}
+                  <div className="text-gray-500 space-y-1">
+                    <p className="text-sm font-medium">이 영역에 이름을 크게 작성하세요</p>
+                    <p className="text-xs">예: 김철수</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 하단 버튼들 */}
           <div className="p-4 bg-white border-t">
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-2 justify-center">
+              {/* 실행취소 버튼 */}
               <Button
                 variant="outline"
-                onClick={clearCanvas}
-                className="flex items-center gap-2"
+                onClick={undoLastStroke}
+                disabled={strokes.length === 0}
+                className="flex items-center gap-1 px-3"
+                title="마지막 획 되돌리기"
               >
-                <Trash2 className="h-4 w-4" />
-                지우기
+                <Undo2 className="h-4 w-4" />
+                <span className="hidden sm:inline">실행취소</span>
               </Button>
               
+              {/* 전체 지우기 버튼 */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  clearCanvas()
+                  setShowGuide(true) // 지우기 시 가이드 다시 표시
+                }}
+                className="flex items-center gap-1 px-3"
+                title="전체 지우기"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">전체지우기</span>
+              </Button>
+              
+              {/* 이름 인식 버튼 */}
               <Button
                 onClick={handleRecognize}
                 disabled={isProcessing}
-                className="flex items-center gap-2 bg-brand hover:bg-brand/90"
+                className="flex items-center gap-1 px-3 bg-brand hover:bg-brand/90"
               >
                 {isProcessing ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    인식 중...
+                    <span className="hidden sm:inline">인식 중...</span>
                   </>
                 ) : (
                   <>
                     <Check className="h-4 w-4" />
-                    인식 시작
+                    <span className="hidden sm:inline">이름 인식</span>
                   </>
                 )}
               </Button>

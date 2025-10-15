@@ -13,15 +13,18 @@ import Loading from "@/components/ui/loading"
 import CollectionFormModalV2 from "@/components/collections/collection-form-modal-v2"
 import CollectionTableV2 from "@/components/collections/collection-table-v2"
 import { CollectionWithUser } from "@/lib/database.types"
-import { getKoreanToday } from "@/lib/date-utils"
+import { getKoreanToday, getKoreanTomorrow, getKoreanDayAfterTomorrow, getDateDisplayText } from "@/lib/date-utils"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
-  const { collections, loading: collectionsLoading, getTodayStats, fetchCollections, updateCollection, deleteCollection, createCollection } = useCollections()
+  const { collections, loading: collectionsLoading, getTodayStats, getDateStats, fetchCollections, updateCollection, deleteCollection, createCollection } = useCollections()
   const [showModal, setShowModal] = useState(false)
   const [editingCollection, setEditingCollection] = useState<CollectionWithUser | null>(null)
   const [activeTab, setActiveTab] = useState("today")
   const [currentDate, setCurrentDate] = useState(getKoreanToday())
+  const [selectedDate, setSelectedDate] = useState(getKoreanToday()) // 선택된 날짜 상태 추가
   const router = useRouter()
 
   useEffect(() => {
@@ -87,21 +90,21 @@ export default function Home() {
     router.push('/delivery-notes')
   }
 
-  // 통계 데이터
-  const stats = getTodayStats()
+  // 통계 데이터 (선택된 날짜 기준)
+  const stats = getDateStats(selectedDate)
 
-  // 탭별 필터링 (당일 기준)
+  // 탭별 필터링 (선택된 날짜 기준)
   const getFilteredCollections = () => {
-    const todayCollections = collections.filter(col => col.reception_date === currentDate)
+    const selectedDateCollections = collections.filter(col => col.reception_date === selectedDate)
     
     switch (activeTab) {
       case "pending":
-        return todayCollections.filter(col => col.status === 'pending')
+        return selectedDateCollections.filter(col => col.status === 'pending')
       case "completed":
-        return todayCollections.filter(col => col.status === 'completed')
+        return selectedDateCollections.filter(col => col.status === 'completed')
       case "today":
       default:
-        return todayCollections
+        return selectedDateCollections
     }
   }
 
@@ -111,18 +114,67 @@ export default function Home() {
     <MainLayout user={user ? { name: user.name, email: user.email, role: user.role || 'user' } : null}>
       <div className="flex flex-col gap-6">
         {/* 페이지 헤더 - 모든 화면에서 최상단 */}
-        <div className="order-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">팀 수거관리</h1>
-            <p className="text-sm sm:text-base text-gray-600">팀 전체 수거 현황을 실시간으로 공유하고 관리합니다</p>
+        <div className="order-1 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">수거관리</h1>
+              <p className="text-sm sm:text-base text-gray-600">팀 전체 수거 현황을 실시간으로 공유하고 관리합니다</p>
+            </div>
+            <Button 
+              className="bg-brand hover:bg-green-700 w-full sm:w-auto"
+              onClick={handleOpenModal}
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              접수 등록
+            </Button>
           </div>
-          <Button 
-            className="bg-brand hover:bg-green-700 w-full sm:w-auto"
-            onClick={handleOpenModal}
-          >
-            <PlusIcon className="w-4 h-4 mr-2" />
-            접수 등록
-          </Button>
+
+          {/* 날짜 선택 영역 */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="selected-date" className="text-sm font-medium text-gray-700">
+                조회 날짜:
+              </Label>
+              <Input
+                id="selected-date"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+              <span className="text-sm text-gray-600">
+                {getDateDisplayText(selectedDate)}
+              </span>
+            </div>
+            
+            {/* 빠른 날짜 선택 버튼 */}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedDate(getKoreanToday())}
+                className={selectedDate === getKoreanToday() ? "bg-brand text-white" : ""}
+              >
+                오늘
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedDate(getKoreanTomorrow())}
+                className={selectedDate === getKoreanTomorrow() ? "bg-brand text-white" : ""}
+              >
+                내일
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedDate(getKoreanDayAfterTomorrow())}
+                className={selectedDate === getKoreanDayAfterTomorrow() ? "bg-brand text-white" : ""}
+              >
+                모레
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* 접수 목록 영역 - 모바일에서 2순위, PC에서 3순위 */}
@@ -130,7 +182,7 @@ export default function Home() {
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                <CardTitle className="text-lg sm:text-xl">팀 접수 목록</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">접수 목록</CardTitle>
                 <Button
                   variant="outline"
                   onClick={handleDeliveryNotes}
@@ -153,15 +205,15 @@ export default function Home() {
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="today" className="text-xs sm:text-sm">
                       <span className="sm:hidden">전체 ({stats.total})</span>
-                      <span className="hidden sm:inline">당일 전체 ({stats.total})</span>
+                      <span className="hidden sm:inline">선택일 전체 ({stats.total})</span>
                     </TabsTrigger>
                     <TabsTrigger value="pending" className="text-xs sm:text-sm">
                       <span className="sm:hidden">대기 ({stats.pending})</span>
-                      <span className="hidden sm:inline">당일 대기중 ({stats.pending})</span>
+                      <span className="hidden sm:inline">선택일 대기중 ({stats.pending})</span>
                     </TabsTrigger>
                     <TabsTrigger value="completed" className="text-xs sm:text-sm">
                       <span className="sm:hidden">완료 ({stats.completed})</span>
-                      <span className="hidden sm:inline">당일 완료 ({stats.completed})</span>
+                      <span className="hidden sm:inline">선택일 완료 ({stats.completed})</span>
                     </TabsTrigger>
                   </TabsList>
 
@@ -184,12 +236,12 @@ export default function Home() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium text-gray-500">
-                오늘 총 접수
+                선택일 총 접수
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-2xl font-bold text-gray-900">{stats.total}건</div>
-              <p className="text-xs text-gray-500 hidden sm:block">전일 대비 -</p>
+              <p className="text-xs text-gray-500 hidden sm:block">{getDateDisplayText(selectedDate)}</p>
             </CardContent>
           </Card>
 

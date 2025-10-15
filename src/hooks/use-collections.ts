@@ -238,17 +238,15 @@ export function useCollections() {
     }
   }
 
-  // 오늘 통계 계산
-  const getTodayStats = () => {
-    // 한국 시간대(KST) 기준으로 오늘 날짜 계산
-    const today = getKoreanToday()
-    const todayCollections = collections.filter(
-      col => col.reception_date === today
+  // 특정 날짜 통계 계산
+  const getDateStats = (date: string) => {
+    const dateCollections = collections.filter(
+      col => col.reception_date === date
     )
 
-    const total = todayCollections.length
-    const completed = todayCollections.filter(col => col.status === 'completed').length
-    const pending = todayCollections.filter(col => col.status === 'pending').length
+    const total = dateCollections.length
+    const completed = dateCollections.filter(col => col.status === 'completed').length
+    const pending = dateCollections.filter(col => col.status === 'pending').length
 
     // 완료율 계산 (전체가 0일 때는 0%로 표시)
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
@@ -258,10 +256,15 @@ export function useCollections() {
       pending,
       completed,
       completionRate, // 완료율 추가
-      totalQuantity: todayCollections.reduce((sum, col) => sum + (col.quantity || 0), 0),
-      boxes5kg: todayCollections.filter(col => col.box_weight === '5kg').reduce((sum, col) => sum + (col.quantity || 0), 0),
-      boxes10kg: todayCollections.filter(col => col.box_weight === '10kg').reduce((sum, col) => sum + (col.quantity || 0), 0),
+      totalQuantity: dateCollections.reduce((sum, col) => sum + (col.quantity || 0), 0),
+      boxes5kg: dateCollections.filter(col => col.box_weight === '5kg').reduce((sum, col) => sum + (col.quantity || 0), 0),
+      boxes10kg: dateCollections.filter(col => col.box_weight === '10kg').reduce((sum, col) => sum + (col.quantity || 0), 0),
     }
+  }
+
+  // 오늘 통계 계산 (기존 호환성 유지)
+  const getTodayStats = () => {
+    return getDateStats(getKoreanToday())
   }
 
   useEffect(() => {
@@ -286,5 +289,6 @@ export function useCollections() {
     fetchMarkets,
     fetchMarketRegions,
     getTodayStats,
+    getDateStats, // 새로운 함수 추가
   }
 }

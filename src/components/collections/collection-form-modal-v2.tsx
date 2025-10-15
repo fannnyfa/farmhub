@@ -17,7 +17,6 @@ import Loading from "@/components/ui/loading"
 import { getKoreanToday } from "@/lib/date-utils"
 import { CanvasModal } from "@/components/pen-input/canvas-modal"
 import { PenTool } from "lucide-react"
-import { matchTextToFields, generateMatchMessage, matchesToFormData } from "@/lib/field-matcher"
 
 interface ApiResponse {
   success: boolean
@@ -149,44 +148,40 @@ export default function CollectionFormModalV2({
     }))
   }
 
-  // 터치입력 인식 처리 함수
+  // 터치입력 인식 처리 함수 (생산자명 전용)
   const handleCanvasRecognition = (recognizedText: string) => {
     console.log('인식된 텍스트:', recognizedText)
     
     try {
-      // 스마트 필드 매칭 실행
-      const fieldMatches = matchTextToFields(recognizedText)
-      
-      if (fieldMatches.length === 0) {
-        toast.warning('인식 가능한 정보를 찾을 수 없습니다. 더 명확하게 작성해주세요.')
+      // 텍스트 정리 (공백, 줄바꿈 제거)
+      const cleanedText = recognizedText
+        .replace(/\n/g, ' ')        // 줄바꿈을 공백으로
+        .replace(/\s+/g, ' ')       // 연속 공백을 하나로
+        .trim()                     // 앞뒤 공백 제거
+
+      if (!cleanedText) {
+        toast.warning('인식된 텍스트가 없습니다. 더 명확하게 작성해주세요.')
         return
       }
 
-      // 매칭된 결과를 폼 데이터로 변환
-      const matchedFormData = matchesToFormData(fieldMatches)
+      // 한글 이름 패턴 검증 (2-4글자 한글)
+      const koreanNamePattern = /^[가-힣]{2,4}$/
       
-      // 각 매칭된 필드를 폼에 적용
-      let appliedCount = 0
-      fieldMatches.forEach(match => {
-        if (match.confidence >= 0.6) { // 신뢰도 60% 이상만 적용
-          handleInputChange(match.field, match.value)
-          toast.success(generateMatchMessage(match))
-          appliedCount++
-        }
-      })
-
-      if (appliedCount > 0) {
-        toast.success(`총 ${appliedCount}개 필드가 자동으로 입력되었습니다.`)
+      if (koreanNamePattern.test(cleanedText)) {
+        // 정확한 한글 이름 패턴
+        handleInputChange("producer_name", cleanedText)
+        toast.success(`생산자명이 입력되었습니다: ${cleanedText}`)
       } else {
-        toast.warning('신뢰도가 낮아 자동 입력할 수 없습니다. 수동으로 입력해주세요.')
+        // 패턴이 맞지 않지만 일단 입력 (사용자가 수정 가능)
+        handleInputChange("producer_name", cleanedText)
+        toast.warning(`입력되었지만 확인해주세요: ${cleanedText}`)
       }
 
-      console.log('매칭 결과:', fieldMatches)
-      console.log('적용된 폼 데이터:', matchedFormData)
+      console.log('생산자명 입력 완료:', cleanedText)
       
     } catch (error) {
-      console.error('필드 매칭 오류:', error)
-      toast.error('텍스트 분석 중 오류가 발생했습니다.')
+      console.error('생산자명 인식 오류:', error)
+      toast.error('이름 인식 중 오류가 발생했습니다.')
     }
   }
 
@@ -299,33 +294,33 @@ export default function CollectionFormModalV2({
         <form className="space-y-6">
           {/* 1. 생산자 정보 */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-lg font-semibold">1. 생산자 정보</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCanvasModal(true)}
-                className="flex items-center gap-2 text-brand border-brand hover:bg-brand hover:text-white"
-                disabled={loading}
-              >
-                <PenTool className="h-4 w-4" />
-                <span className="hidden sm:inline">터치입력</span>
-                <span className="sm:hidden">✏️</span>
-              </Button>
-            </div>
+            <h3 className="text-lg font-semibold border-b pb-2">1. 생산자 정보</h3>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="producer_name">생산자명 *</Label>
-                <Input
-                  id="producer_name"
-                  value={formData.producer_name}
-                  onChange={(e) => handleInputChange("producer_name", e.target.value)}
-                  placeholder="생산자명"
-                  required
-                  disabled={loading}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="producer_name"
+                    value={formData.producer_name}
+                    onChange={(e) => handleInputChange("producer_name", e.target.value)}
+                    placeholder="생산자명"
+                    required
+                    disabled={loading}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCanvasModal(true)}
+                    className="px-3 text-brand border-brand hover:bg-brand hover:text-white"
+                    disabled={loading}
+                    title="펜으로 생산자명 입력"
+                  >
+                    <PenTool className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
