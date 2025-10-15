@@ -15,6 +15,9 @@ import { Collection, CollectionInsert, ProductType } from "@/lib/database.types"
 import { toast } from "sonner"
 import Loading from "@/components/ui/loading"
 import { getKoreanToday } from "@/lib/date-utils"
+import { CanvasModal } from "@/components/pen-input/canvas-modal"
+import { PenTool } from "lucide-react"
+import { matchTextToFields, generateMatchMessage, matchesToFormData } from "@/lib/field-matcher"
 
 interface ApiResponse {
   success: boolean
@@ -58,6 +61,7 @@ export default function CollectionFormModalV2({
   })
 
   const [loading, setLoading] = useState(false)
+  const [showCanvasModal, setShowCanvasModal] = useState(false)
 
   // 공판장 목록 (하드코딩) - 사용자 요청 순서
   const markets = [
@@ -143,6 +147,47 @@ export default function CollectionFormModalV2({
       ...prev,
       [field]: value,
     }))
+  }
+
+  // 터치입력 인식 처리 함수
+  const handleCanvasRecognition = (recognizedText: string) => {
+    console.log('인식된 텍스트:', recognizedText)
+    
+    try {
+      // 스마트 필드 매칭 실행
+      const fieldMatches = matchTextToFields(recognizedText)
+      
+      if (fieldMatches.length === 0) {
+        toast.warning('인식 가능한 정보를 찾을 수 없습니다. 더 명확하게 작성해주세요.')
+        return
+      }
+
+      // 매칭된 결과를 폼 데이터로 변환
+      const matchedFormData = matchesToFormData(fieldMatches)
+      
+      // 각 매칭된 필드를 폼에 적용
+      let appliedCount = 0
+      fieldMatches.forEach(match => {
+        if (match.confidence >= 0.6) { // 신뢰도 60% 이상만 적용
+          handleInputChange(match.field, match.value)
+          toast.success(generateMatchMessage(match))
+          appliedCount++
+        }
+      })
+
+      if (appliedCount > 0) {
+        toast.success(`총 ${appliedCount}개 필드가 자동으로 입력되었습니다.`)
+      } else {
+        toast.warning('신뢰도가 낮아 자동 입력할 수 없습니다. 수동으로 입력해주세요.')
+      }
+
+      console.log('매칭 결과:', fieldMatches)
+      console.log('적용된 폼 데이터:', matchedFormData)
+      
+    } catch (error) {
+      console.error('필드 매칭 오류:', error)
+      toast.error('텍스트 분석 중 오류가 발생했습니다.')
+    }
   }
 
   // 유효성 검증 함수
@@ -254,7 +299,21 @@ export default function CollectionFormModalV2({
         <form className="space-y-6">
           {/* 1. 생산자 정보 */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold border-b pb-2">1. 생산자 정보</h3>
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="text-lg font-semibold">1. 생산자 정보</h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCanvasModal(true)}
+                className="flex items-center gap-2 text-brand border-brand hover:bg-brand hover:text-white"
+                disabled={loading}
+              >
+                <PenTool className="h-4 w-4" />
+                <span className="hidden sm:inline">터치입력</span>
+                <span className="sm:hidden">✏️</span>
+              </Button>
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -556,6 +615,13 @@ export default function CollectionFormModalV2({
             )}
           </div>
         </form>
+
+        {/* 터치입력 캔버스 모달 */}
+        <CanvasModal
+          isOpen={showCanvasModal}
+          onClose={() => setShowCanvasModal(false)}
+          onRecognize={handleCanvasRecognition}
+        />
       </DialogContent>
     </Dialog>
   )
