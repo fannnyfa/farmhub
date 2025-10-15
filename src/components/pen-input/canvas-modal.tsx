@@ -20,21 +20,78 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
 
   useEffect(() => {
     if (isOpen) {
-      // 모달이 열릴 때 캔버스 초기화
-      clearCanvas()
+      // 모달 DOM이 완전히 렌더링된 후 캔버스 초기화
+      const initializeCanvas = () => {
+        clearCanvas()
+        console.log('캔버스 초기화 완료')
+      }
+
+      // 짧은 지연으로 DOM 렌더링 완료 대기
+      const timeoutId = setTimeout(initializeCanvas, 150)
+      
+      // 추가 안전 장치: requestAnimationFrame으로 한 번 더 지연
+      requestAnimationFrame(() => {
+        setTimeout(initializeCanvas, 50)
+      })
+
+      return () => {
+        clearTimeout(timeoutId)
+      }
+    }
+  }, [isOpen])
+
+  // ResizeObserver로 캔버스 크기 변화 감지
+  useEffect(() => {
+    if (isOpen && canvasRef.current) {
+      const canvas = canvasRef.current
+      
+      const handleResize = () => {
+        console.log('캔버스 크기 변화 감지, 재초기화 중...')
+        clearCanvas()
+      }
+
+      // ResizeObserver 지원 여부 확인
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(handleResize)
+        resizeObserver.observe(canvas)
+
+        return () => {
+          resizeObserver.disconnect()
+        }
+      } else {
+        // ResizeObserver 미지원 시 window resize 이벤트 사용
+        window.addEventListener('resize', handleResize)
+        return () => {
+          window.removeEventListener('resize', handleResize)
+        }
+      }
     }
   }, [isOpen])
 
   const clearCanvas = () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas) {
+      console.warn('캔버스 요소를 찾을 수 없습니다')
+      return
+    }
 
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx) {
+      console.warn('캔버스 컨텍스트를 가져올 수 없습니다')
+      return
+    }
 
     // 캔버스 크기를 정확히 설정 (DPI 고려)
     const rect = canvas.getBoundingClientRect()
     const devicePixelRatio = window.devicePixelRatio || 1
+    
+    console.log('캔버스 크기 설정:', {
+      cssWidth: rect.width,
+      cssHeight: rect.height,
+      devicePixelRatio,
+      canvasWidth: rect.width * devicePixelRatio,
+      canvasHeight: rect.height * devicePixelRatio
+    })
     
     // 실제 표시 크기
     canvas.style.width = rect.width + 'px'
@@ -99,6 +156,28 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
       return
     }
 
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    // 안전 장치: 캔버스 크기가 제대로 설정되지 않았으면 재초기화
+    if (canvas.width === 0 || canvas.height === 0) {
+      console.log('캔버스 크기가 0입니다. 재초기화 중...')
+      clearCanvas()
+      
+      // 재초기화 후 잠시 대기
+      setTimeout(() => {
+        if (canvas.width > 0 && canvas.height > 0) {
+          console.log('재초기화 완료, 그리기 시작')
+          startDrawingInternal(e)
+        }
+      }, 50)
+      return
+    }
+
+    startDrawingInternal(e)
+  }
+
+  const startDrawingInternal = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true)
     const canvas = canvasRef.current
     if (!canvas) return
@@ -107,6 +186,7 @@ export function CanvasModal({ isOpen, onClose, onRecognize }: CanvasModalProps) 
     if (!ctx) return
 
     const { x, y } = getCoordinates(e)
+    console.log('그리기 시작 좌표:', { x, y })
 
     ctx.beginPath()
     ctx.moveTo(x, y)
